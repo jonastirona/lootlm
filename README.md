@@ -1,75 +1,124 @@
 # LootLM
 
-A private model arcade: roll a model, receive 1,000,000 tokens, and use your allowance through a familiar API. Includes a web arcade and installable terminal client with animated rolls.
+LootLM is stochastic inference in the terminal: fund an account, roll into one model, and keep working with that model for a bounded token session. The repository, project, and conversation should survive the next roll; only the model changes.
 
-**Internal testing only.** Purchases are simulated. Demo mode performs no paid inference and clearly identifies its simulated responses. This repository is not a public commercial launch or supplier resale authorization.
+**Terminal only.** LootLM has no product web app. The checked-in `public/` prototype is retained as unserved design history, is excluded from the package, and is not part of the user journey.
 
-## Start locally
+**Internal testing only.** The current server simulates purchases and inference by default. It is not a public commercial launch, supplier resale authorization, or proof of durable cross-roll context.
 
-Requires Node.js **24.2 or later** and npm. No database service is needed.
+## Current maturity
+
+This branch contains a working terminal UX over Jonas's original API:
+
+- `loot` opens an interactive prompt shell; `lootlm` remains a compatibility alias.
+- The selected model, project, token allocation, published odds, vault, usage, and errors are legible in-terminal.
+- Conversation context follows the user across rolls while that shell remains open.
+- Common, Uncommon, Rare, Epic, and Legendary each have a distinct ANSI color, glyph, and text label. Legendary is reserved for each 2% pool entry. Mythic is not in the MVP.
+- Animations are cosmetic. The cryptographically random server result is persisted first and survives an interrupted reveal.
+- `--json`, `NO_COLOR=1`, reduced motion, and narrow/noninteractive terminals remain supported.
+
+The backend still grants one million shared **test** tokens from a four-model placeholder pool. It has no wallet, real checkout, $0.50 debit, 100k-fresh-input/20k-output split, or durable project checkpoint API yet. Those are explicit integration seams in [the terminal product contract](docs/terminal-product-contract.md), not shipped claims.
+
+## Run the internal build
+
+Requires Node.js 24.2 or later and npm.
 
 ```sh
 npm install
 npm start
 ```
 
-Open **http://localhost:3131**. Sign in as `demo@lootlm.local`; the generated access code is in `.lootlm/access-code` in the directory where you started the server:
-
-```sh
-cat .lootlm/access-code
-```
-
-Local runtime data lives in `.lootlm/`, ignored by git and excluded from packages. SQLite uses WAL and atomic transactions. Keep this version to **one server process** with a persistent local disk; it is not a horizontally scaled PostgreSQL deployment.
-
-## Install the CLI
-
-From this downloaded project:
+In another terminal:
 
 ```sh
 npm link
-lootlm login
-lootlm roll
-lootlm inventory
-lootlm chat "Give me an unusual app idea."
+loot login --url http://localhost:3131
+loot roll
+loot
 ```
 
-For a downloadable installer artifact:
+The local access code is generated at `.lootlm/access-code`. Runtime data lives under `.lootlm/`, which is ignored by git. The SQLite prototype supports one server process on persistent local disk; it is not a horizontally scaled deployment.
+
+## Terminal flow
+
+```text
+$ loot
+
+  ◈  lootlm  / STOCHASTIC INFERENCE
+  roll a brain. keep the work.
+
+  PROJECT    my-repo
+  LOADOUT    ✧ GPT-6 Sol  EPIC
+  TOKENS     ━━━━━━━━━━━━━━━───  88k available
+
+  loot › /odds
+  loot › /roll
+  loot › Review the auth changes in this repository.
+```
+
+Inside the shell:
+
+- `/roll` rolls another model without clearing the open conversation.
+- `/models` lists saved model allocations; `/use N` equips one.
+- `/odds` shows exact server-published probabilities.
+- `/status` shows project, loadout, and remaining allocation.
+- `/new` clears in-memory conversation context without changing models.
+- `/help` lists commands; `/exit` leaves the shell.
+
+One-shot commands are also available:
 
 ```sh
-npm pack
-npm install --global ./lootlm-0.1.0.tgz
+loot status
+loot odds
+loot inventory
+loot use 2
+loot chat "Give me an unusual app idea."
+loot usage
 ```
 
-The package is **not published to npm**. Do not assume `npm install -g lootlm` points to this project. A local installation exposes the `lootlm` command; `lootlm serve` starts the bundled private server. The CLI defaults to localhost. Use `lootlm login --url https://your-private-host.example` for your own deployed server.
+## Target MVP economics
 
-`lootlm roll --no-animation` and `LOOTLM_REDUCED_MOTION=1` skip animation. `--json` produces script-friendly output without ANSI decoration. `NO_COLOR=1` disables color. Noninteractive terminals skip animation automatically. The web app respects the operating system's reduced-motion preference; sound is opt-in.
+- Fixed $10 account reload.
+- USD-denominated, non-transferable balance with no cash-out.
+- $0.50 debit per roll.
+- Roughly 100k fresh input plus 20k output per rolled session.
+- Target expected inference COGS near $0.20 per roll.
+- Target gross spread near 60% before payment and infrastructure costs.
 
-## What works
+Dollar amounts stay outside the animated reveal, but the wallet and exact debit must be clear before a paid roll and the post-roll balance must be clear afterward. Do not use an intermediate currency to hide the effective cash price.
 
-- Invite-only tester login, sessions, API keys and revocation.
-- Independent cryptographically random rolls; immutable model and odds snapshots.
-- A guaranteed one-million-token allowance per test roll.
-- Web and terminal reel animations, vault, usage, keys, integration examples.
-- OpenAI-compatible text Chat Completions, streaming and function-tool forwarding.
-- Atomic reservations, concurrency limits, separate actual token and provider-cost ledgers.
-- OpenRouter adapter with explicit live enablement, model-catalog checks and price ceilings.
-- Global daily budget, per-request limits, rare-tier switch and emergency pause.
-- Incomplete provider requests stay reserved; reconciliation retries every 30 seconds.
-- Administrative model-pool editing, audit log and evidence-based manual settlement.
+The planned `loot topup` command creates a fresh server-side Stripe Checkout Session, opens Stripe's hosted payment page, and waits in the terminal for webhook-verified credit. LootLM must never collect card details in the terminal or credit from the browser redirect. This flow is not implemented yet.
 
-## Enable OpenRouter internal testing
+## Target model pool
 
-1. Copy `.env.example` to `.env` and set `OPENROUTER_API_KEY`, `LOOTLM_PROVIDER=openrouter`, and `LOOTLM_LIVE_ENABLED=true`.
-2. Keep a small `LOOTLM_DAILY_USD` and restart the server.
-3. Open **Admin**. Replace the demo pool with model IDs actually present in OpenRouter's catalog and conservative nonzero `inputPrice` / `outputPrice` values in **USD per million**. Publishing a live pool checks catalog availability and prices. Unsupported additional charges are rejected.
-4. Roll **new** allowances from that pool. Demo-era allowances have zero price ceilings and cannot silently become live inference allowances.
-5. Rare live inference starts disabled. Enable it explicitly in Admin only after reviewing the budget.
+Provider availability and distribution policy must be verified before any paid pool is published. Display names below are product inputs, not claims that the models are currently orderable through a particular provider.
 
-Every live request rechecks its exact model and price ceiling. Model fallback is disabled. A provider may still route among endpoints for the same model. Price checks are not guaranteed future pricing; if actual use exceeds a reservation, inference pauses and an audit record is created.
+| Rarity | Model | Chance |
+| --- | --- | ---: |
+| Common | GLM 5.3 Flash | 25% |
+| Common | DeepSeek V4.1 Flash | 20% |
+| Uncommon | MiMo V2.6 Pro | 15% |
+| Uncommon | Gemini 3.8 Flash | 10% |
+| Rare | GLM 5.3 | 9% |
+| Rare | Grok 4.7 | 7% |
+| Epic | GPT-6 Sol | 6% |
+| Epic | Claude Opus 5.5 | 4% |
+| Legendary | Claude Fable 5.1 | 2% |
+| Legendary | GPT-6 Astra | 2% |
 
-A request reserves a conservative UTF-8 input bound plus maximum generation, and a dollar ceiling with 10% headroom. This is **not an exact tokenizer guarantee for every provider**. Only admit models whose accounting and limit behavior you have verified. If a provider exceeds the bound, the true usage is retained (including a possible negative allowance) and inference stops. This internal MVP is fail-closed on unknown usage, not an absolute upstream spend guarantee.
+## Existing API and safety controls
 
-## Tests
+- Invite-only login, scoped API keys, and revocation.
+- Immutable model and odds snapshots per roll.
+- OpenAI-compatible text Chat Completions, streaming, and function-tool forwarding.
+- Atomic reservations, per-user concurrency limits, and separate token/provider-cost ledgers.
+- OpenRouter adapter with explicit live enablement, catalog checks, price ceilings, no fallback, and a global daily cap.
+- Pending reconciliation for incomplete provider requests.
+- CLI-only pool administration, audit log, and evidence-based manual settlement.
+
+The provider adapter is not supplier permission. Paid resale, model-specific accounting, refunds, chargebacks, wallet treatment, identity recovery, and jurisdiction-specific review remain launch gates.
+
+## Verification
 
 ```sh
 npm test
@@ -77,14 +126,13 @@ npm run check
 npm run pack:check
 ```
 
-Tests use isolated temporary databases and a simulated provider; no OpenRouter spend. They cover authorization, isolation, idempotency, concurrent reservations, budget caps, usage normalization, streaming, tools and incomplete-request recovery.
+The automated suite is local and uses a simulated provider, so it creates no model spend. Passing it proves the tested API/CLI contracts, not paid-launch readiness or live provider availability.
 
 ## Guides
 
 - [Human quickstart](docs/human-onboarding.md)
 - [CLI reference](docs/cli.md)
+- [Terminal product and Jonas backend contract](docs/terminal-product-contract.md)
 - [API integration](docs/api.md)
 - [Coding-agent onboarding](docs/agents.md)
 - [Operator guide and limitations](docs/operations.md)
-
-No payments, referrals, public signup, cash-out, MCP server, web chat history, or commercial supplier agreements are included. The connection test is a single request, not a full chat product. Do not expose the localhost prototype directly to the public internet.

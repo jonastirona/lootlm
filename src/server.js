@@ -27,7 +27,7 @@ export function createApp(cfg,options={}){
   const email=String(req.body.email||'').trim().toLowerCase();
   if(!cfg.testers.includes(email)||!eq(req.body.code||'',cfg.accessCode))reject(401,'invalid_login','Email or access code is incorrect.');
   const user=store.user(email);
-  if(req.body.cli===true){if(store.keys(user).length>=20)reject(400,'key_limit','Revoke an old key in the dashboard before logging in another CLI.');const key=store.credential(user,'key','LootLM CLI');return res.json({user,key:key.key});}
+  if(req.body.cli===true){if(store.keys(user).length>=20)reject(400,'key_limit','Revoke an old key with `loot keys revoke` before logging in another CLI.');const key=store.credential(user,'key','LootLM CLI');return res.json({user,key:key.key});}
   const session=store.credential(user,'session','Browser');
   res.cookie('lootlm_session',session.key,{httpOnly:true,sameSite:'strict',secure:cfg.secureCookie,maxAge:7*86400000,path:'/'});
   res.json({user});
@@ -125,7 +125,7 @@ export function createApp(cfg,options={}){
    else res.status(e.status||502).json({error:{code:e.code||'upstream_incomplete',message:e.safeToRelease?e.message:'Upstream request incomplete. Reserved tokens remain held until reconciliation.',request_id:rid}});
   }
  });
- app.use(express.static(path.join(dirname,'../public'),{index:'index.html'}));
+ app.use((_req,res)=>res.status(404).json({error:{code:'not_found',message:'LootLM is a terminal-only product. Run `loot help`.'}}));
  app.use((error,_req,res,_next)=>{if(res.headersSent)return res.end();res.status(error.status||500).json({error:{code:error.code||'internal_error',message:error.status?error.message:'Internal server error.'}});if(!error.status)console.error(error);});
  let reconciling=false;
  const reconcile=async()=>{

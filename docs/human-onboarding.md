@@ -1,16 +1,19 @@
-# Your first LootLM model
+# Your first LootLM roll
 
-1. Start the private server with `npm start` and open the printed localhost URL.
-2. Use the invited email and access code. The default email is `demo@lootlm.local`; the local code is in `.lootlm/access-code`.
-3. Review the pool and odds, then choose **Let it roll**. A roll is saved before the reveal; animation does not influence the result. There is no payment.
-4. Visit **Your vault**. Each award has a fixed model and one million input-plus-generated tokens. Unused tokens do not expire.
-5. Choose **Use this model**. Create a key, copy it once, and store it in an environment variable. Copy the Python or curl example.
-6. Use **Give it a thought** to make a small test request. In demo mode the reply is simulated and says so.
+This is an internal terminal-only build. Demo mode charges no money and labels its simulated responses.
 
-Input includes repeated conversation history and cached input. Generated usage includes reasoning when reported within the provider's completion count; it is not counted twice. Provider cost is separate from allowance usage.
+1. Start the API server with `npm start`.
+2. Install the local command with `npm link`.
+3. Run `loot login --url http://localhost:3131`. Use the invited email and the access code stored by the server at `.lootlm/access-code`.
+4. Run `loot odds`. Confirm that every model has an exact probability and rarity label.
+5. Run `loot roll`. The server saves the result before the animation begins; skipping or interrupting the reveal cannot reroll it.
+6. Run `loot`. Type a prompt, then use `/roll` and send a follow-up. The second model receives the current shell's conversation context.
+7. Use `/models`, `/status`, `/new`, and `/exit` to exercise the rest of the loop.
 
-Tokens marked **reserved** belong to active or unresolved requests. They are not available for new requests until settled. If a stream breaks, check usage before retrying. A disabled model or budget cap pauses access without deleting the balance.
+The current prototype grants one million shared test tokens per roll. That is not the target paid contract of roughly 100k fresh input plus 20k output. Conversation continuity currently lasts only while the interactive shell is open. A clean restart does not yet restore project context.
 
-For terminal use, install the local package and run `lootlm login`, `lootlm roll`, and `lootlm chat "Hello"`. See the CLI guide.
+Input includes repeated conversation history. Generated usage includes reasoning when the provider reports it within completion tokens; it is not counted twice. Reserved tokens belong to active or unresolved requests and cannot be reused until settled.
 
-This is a private test build. Awards cannot be transferred, sold, or redeemed for cash. Public sale and proprietary-model distribution require separate clearance.
+If a stream breaks, inspect `loot usage` before retrying. The server never silently switches to a different model or frees uncertain provider usage.
+
+Awards cannot be transferred, sold, or redeemed for cash. Paid loading, debits, refunds, public signup, supplier authorization, and durable checkpoints are not implemented in this build.
