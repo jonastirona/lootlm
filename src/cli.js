@@ -26,6 +26,7 @@ const cmd=flags.help?'help':requested||(stdin.isTTY?'play':'help');
 const configDir=process.env.LOOTLM_CONFIG_DIR||path.join(os.homedir(),'.config','lootlm');
 const configFile=path.join(configDir,'config.json');
 let cfg={};
+let immersiveScreen=false;
 try{cfg=JSON.parse(fs.readFileSync(configFile,'utf8'));}
 catch(error){if(error.code!=='ENOENT')throw Error(`Cannot read ${configFile}: ${error.message}`);}
 
@@ -217,6 +218,10 @@ function slotCard(choice,width,{hot=false}={}){
  ];
  return lines.map(line=>hot?gold('▶')+meta.paint(line)+gold('◀'):meta.paint(' '+line+' '));
 }
+function reelStripRow(choice,width,arrow){
+ const meta=tier(choice.tier),sigil=modelSigils[choice.model]||'AI',body=fitPlain(`[${sigil}] ${modelLabel(choice.model)}`,Math.max(8,width-18));
+ return meta.paint(`${arrow} ${body} ${meta.glyph} ${meta.label.padStart(10)} ${arrow}`);
+}
 
 function renderStatus(info,pool,awards,{withBrand=true}={}){
  const active=currentAward(awards);
@@ -256,27 +261,29 @@ async function animation(award,entries){
  const columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),panel=Math.min(66,columns-4),cardWidth=Math.min(54,panel-6),landing=candidates.findIndex(item=>item.model===winner.model);
  const center=text=>{const length=safeText(text).replace(/\x1b\[[0-9;]*m/g,'').length;return ' '.repeat(Math.max(0,Math.floor((columns-length)/2)))+text;};
  const bulbs=frame=>Array.from({length:Math.floor(panel/2)},(_,i)=>(i+frame)%3===0?hotPink('●'):i%2?cyan('✦'):gold('●')).join(' ');
- const fast=38,slow=30,positions=Array.from({length:fast},(_,i)=>(i*5)%candidates.length);
+ const fast=40,slow=34,positions=Array.from({length:fast},(_,i)=>(i*5)%candidates.length);
  for(let i=0;i<slow;i++)positions.push((landing-(slow-1)+i+candidates.length*4)%candidates.length);
  const draw=(frame,final=false)=>{
-  const index=final?landing:positions[frame],current=candidates[index],before=candidates[(index-1+candidates.length)%candidates.length],after=candidates[(index+1)%candidates.length];
+  const index=final?landing:positions[frame],current=candidates[index];
+  const at=offset=>candidates[(index+offset+candidates.length*4)%candidates.length];
   const lines=[center(bulbs(frame)),center(gold('╔'+'═'.repeat(panel-2)+'╗')),center(gold('║')+royalBold(centeredPlain(final?(winMeta.rank===6?'!!! MYTHIC JACKPOT !!!':'!!! MODEL PAYOUT !!!'):'⚡  LOOTLM HIGH-VOLTAGE MODEL REEL  ⚡',panel-2))+gold('║')),center(gold('╠'+'═'.repeat(panel-2)+'╣'))];
-  if(rows>=19)lines.push(center(dim(`▲ ${modelSigils[before.model]||'AI'} · ${fitPlain(modelLabel(before.model),Math.max(8,panel-12))} ▲`)));
-  const card=slotCard(current,cardWidth,{hot:final});for(const line of card)lines.push(center(line));
-  if(rows>=19)lines.push(center(dim(`▼ ${modelSigils[after.model]||'AI'} · ${fitPlain(modelLabel(after.model),Math.max(8,panel-12))} ▼`)));
+  lines.push(center(reelStripRow(at(-2),panel-4,'▲')),center(reelStripRow(at(-1),panel-4,'▲')));
+  const card=slotCard(current,cardWidth,{hot:true});for(const line of card)lines.push(center(line));
   lines.push(center(hotPink('▶▶▶')+gold('═'.repeat(panel-6))+hotPink('◀◀◀')),center(gold('╚'+'═'.repeat(panel-2)+'╝')));
+  lines.splice(lines.length-1,0,center(reelStripRow(at(1),panel-4,'▼')),center(reelStripRow(at(2),panel-4,'▼')));
   const progress=Math.round(((final?positions.length:frame+1)/positions.length)*(panel-12));
   lines.push(center(final?winMeta.paint(`${winMeta.glyph} ${modelLabel(winner.model)} ${winMeta.glyph}`):royalRed('▰'.repeat(progress))+burgundy('▱'.repeat(panel-12-progress))));
   lines.push(center(final?shineText('1,000,000 TOKENS UNLOCKED',winMeta,frame%24):dim(frame<fast?'REEL AT MAXIMUM VELOCITY':'DECELERATING · WATCH THE PAYLINE')));
   lines.push(center(final?hotPink('✦ ✦ ✦ EQUIPPED AND READY ✦ ✦ ✦'):cyan(`${modelSigils[current.model]||'AI'} CARD ${String(index+1).padStart(2,'0')} / ${candidates.length}`)));
   stdout.write('\x1b[H'+lines.slice(0,rows).map(line=>'\x1b[2K'+line).join('\n'));
  };
- stdout.write('\x1b[?1049h\x1b[2J\x1b[H\x1b[?25l');
- const restore=()=>stdout.write('\x1b[?25h\x1b[?1049l');
- const interrupt=()=>{restore();process.exit(130);};process.once('SIGINT',interrupt);
+ const ownsScreen=!immersiveScreen;
+ stdout.write((ownsScreen?'\x1b[?1049h':'')+'\x1b[2J\x1b[H\x1b[?25l');
+ const restore=()=>stdout.write('\x1b[?25h'+(ownsScreen?'\x1b[?1049l':'\x1b[2J\x1b[H'));
+ const interrupt=()=>{stdout.write('\x1b[?25h\x1b[?1049l');process.exit(130);};process.once('SIGINT',interrupt);
  try{
-  for(let frame=0;frame<positions.length;frame++){draw(frame);await sleep(frame<fast?44:75+(frame-fast)*7);}
-  for(let frame=0;frame<(winMeta.rank>=4?24:14);frame++){draw(frame,true);await sleep(80);}
+  for(let frame=0;frame<positions.length;frame++){draw(frame);await sleep(frame<fast?60:100+(frame-fast)*7);}
+  for(let frame=0;frame<(winMeta.rank>=4?28:18);frame++){draw(frame,true);await sleep(90);}
   await sleep(winMeta.rank>=4?850:500);
  }finally{process.removeListener('SIGINT',interrupt);restore();}
 }
@@ -444,12 +451,13 @@ async function streamChat({model,choice,messages,maxTokens,showHeader=true}){
 }
 async function play(){
  if(flags.json)throw Error('Interactive mode does not support --json.');
- let [info,pool,allowances]=await Promise.all([json('/internal/me'),json('/internal/pool'),json('/v1/allowances')]);
- let awards=allowances.data;
- renderStatus(info,pool,awards);
- stdout.write(`  ${hotPink('⚡')} ${bold('/roll')}  ${cyan('/models')}  ${gold('/collection')}  ${dim('/help  /exit · or type a prompt')}\n\n`);
- const reader=createInterface({input:stdin,output:stdout,terminal:true});let messages=[];
+ const useScreen=stdout.isTTY;let reader,info,pool,allowances,awards,messages=[];
+ if(useScreen){immersiveScreen=true;stdout.write('\x1b[?1049h\x1b[2J\x1b[H');}
  try{
+  [info,pool,allowances]=await Promise.all([json('/internal/me'),json('/internal/pool'),json('/v1/allowances')]);awards=allowances.data;
+  renderStatus(info,pool,awards);
+  stdout.write(`  ${hotPink('⚡')} ${bold('/roll')}  ${cyan('/models')}  ${gold('/collection')}  ${dim('/help  /exit · or type a prompt')}\n\n`);
+  reader=createInterface({input:stdin,output:stdout,terminal:true});
   while(true){
    let input;try{input=(await reader.question(`  ${royalBold('loot')} ${gold('›')} `)).trim();}catch{break;}
    if(!input)continue;
@@ -479,7 +487,7 @@ async function play(){
      stdout.write(`  ${gold('ACTIVE')} ${modelHeadline(award.choice,meta)} ${dim('· context kept')}\n\n`);continue;
     }
     if(action==='new'){messages=[];stdout.write(`  ${gold('NEW SESSION')} ${dim('Conversation context cleared; model unchanged.')}\n\n`);continue;}
-    if(action==='clear'){stdout.write('\x1bc');renderStatus(info,pool,awards);continue;}
+    if(action==='clear'){stdout.write('\x1b[2J\x1b[H');renderStatus(info,pool,awards);continue;}
     stdout.write(`  ${red('Unknown command')} ${dim('· try /help')}\n\n`);continue;
    }
    const award=currentAward(awards);
@@ -491,7 +499,11 @@ async function play(){
     allowances=await json('/v1/allowances');awards=allowances.data;
    }catch(error){messages.pop();showError(error);}
   }
- }finally{reader.close();stdout.write(`\n  ${dim('Session closed. Your model remains in the vault.')}\n\n`);}
+ }finally{
+  reader?.close();immersiveScreen=false;
+  if(useScreen)stdout.write('\x1b[?25h\x1b[?1000l\x1b[?1006l\x1b[?1049l');
+  stdout.write(`\n  ${dim('Session closed. Your model remains in the vault.')}\n\n`);
+ }
 }
 function help(){
  brand();
@@ -518,7 +530,7 @@ function showError(error){
 async function main(){
  if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args,{json:!!flags.json});return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.5.0\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.6.0\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});

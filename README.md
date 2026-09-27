@@ -13,8 +13,9 @@ This branch contains a working terminal UX over Jonas's original API:
 - `loot` opens an interactive prompt shell; `lootlm` remains a compatibility alias.
 - The interface deliberately uses an obnoxious model-casino identity: animated bulbs, neon marquees, heavy gold cabinet borders, flashing paylines, and oversized payout language.
 - Every one of the 24 models has a stable terminal card with its own two-character sigil, provider label, model title, rarity frame, and color treatment.
-- Rolls use one large vertical model reel, matching the one-model award. Every spin runs through the real card collection, slows across the high-rarity cards, and stops on the persisted award at the center payline.
+- Rolls use one large vertical model wheel with five visible card positions, matching the one-model award. Every spin moves the whole strip, runs through the real collection, slows across the high-rarity cards, and stops on the persisted award at the center payline.
 - The player pulls the lever with Space, Enter, or a terminal mouse click before the server draw. A keyboard fallback is always available because mouse reporting varies by terminal.
+- Interactive `loot` and `lootlm` sessions take over the terminal's alternate screen until exit, using the full window without changing the operating system's fullscreen state or polluting shell scrollback.
 - The real model is always the headline; internal pool nicknames such as `Code Wizard` never appear in the human CLI.
 - Epic, Legendary, and Mythic models receive an animated light sweep during reveals and a static glint when motion is reduced.
 - The selected model, project, token allocation, published odds, vault, usage, and errors are legible in-terminal.
