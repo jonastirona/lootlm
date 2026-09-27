@@ -45,6 +45,7 @@ const blue=value=>paint('38;5;75',value);
 const purple=value=>paint('38;5;141',value);
 const orange=value=>paint('38;2;230;164;49',value);
 const red=value=>paint('38;2;232;76;91',value);
+const payline=value=>paint('1;38;2;255;255;255;48;2;155;30;75',value);
 const dim=value=>paint('2',value);
 const bold=value=>paint('1',value);
 const fmt=value=>new Intl.NumberFormat('en-US').format(Number(value)||0);
@@ -218,11 +219,6 @@ function slotCard(choice,width,{hot=false}={}){
  ];
  return lines.map(line=>hot?gold('▶')+meta.paint(line)+gold('◀'):meta.paint(' '+line+' '));
 }
-function reelStripRow(choice,width,arrow){
- const meta=tier(choice.tier),sigil=modelSigils[choice.model]||'AI',body=fitPlain(`[${sigil}] ${modelLabel(choice.model)}`,Math.max(8,width-18));
- return meta.paint(`${arrow} ${body} ${meta.glyph} ${meta.label.padStart(10)} ${arrow}`);
-}
-
 function renderStatus(info,pool,awards,{withBrand=true}={}){
  const active=currentAward(awards);
  if(active&&cfg.model!==active.id){cfg.model=active.id;writeConfig();}
@@ -258,24 +254,27 @@ async function pullLever(reader){
 async function animation(award,entries){
  if(flags.json||flags['no-animation']||!stdout.isTTY||process.env.LOOTLM_REDUCED_MOTION==='1')return;
  const candidates=entries.length?entries:[award.choice],winner=award.choice,winMeta=tier(winner.tier);
- const columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),panel=Math.min(66,columns-4),cardWidth=Math.min(54,panel-6),landing=candidates.findIndex(item=>item.model===winner.model);
+ const columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),panel=Math.min(76,columns-4),landing=candidates.findIndex(item=>item.model===winner.model);
  const center=text=>{const length=safeText(text).replace(/\x1b\[[0-9;]*m/g,'').length;return ' '.repeat(Math.max(0,Math.floor((columns-length)/2)))+text;};
- const bulbs=frame=>Array.from({length:Math.floor(panel/2)},(_,i)=>(i+frame)%3===0?hotPink('●'):i%2?cyan('✦'):gold('●')).join(' ');
+ const framePaint=frame=>[hotPink,cyan,gold][frame%3];
+ const row=(choice,active=false)=>{
+  const meta=tier(choice.tier),inner=panel-2,sigil=modelSigils[choice.model]||'AI',modelWidth=Math.max(8,inner-20);
+  const text=`${active?'> ':'  '}[${sigil}] ${fitPlain(modelLabel(choice.model),modelWidth)} ${meta.label.padStart(10)}${active?' <':'  '}`;
+  const line=`|${text}|`;return active?payline(line):meta.paint(line);
+ };
  const fast=40,slow=34,positions=Array.from({length:fast},(_,i)=>(i*5)%candidates.length);
  for(let i=0;i<slow;i++)positions.push((landing-(slow-1)+i+candidates.length*4)%candidates.length);
  const draw=(frame,final=false)=>{
-  const index=final?landing:positions[frame],current=candidates[index];
+  const index=final?landing:positions[frame];
   const at=offset=>candidates[(index+offset+candidates.length*4)%candidates.length];
-  const lines=[center(bulbs(frame)),center(gold('╔'+'═'.repeat(panel-2)+'╗')),center(gold('║')+royalBold(centeredPlain(final?(winMeta.rank===6?'!!! MYTHIC JACKPOT !!!':'!!! MODEL PAYOUT !!!'):'⚡  LOOTLM HIGH-VOLTAGE MODEL REEL  ⚡',panel-2))+gold('║')),center(gold('╠'+'═'.repeat(panel-2)+'╣'))];
-  lines.push(center(reelStripRow(at(-2),panel-4,'▲')),center(reelStripRow(at(-1),panel-4,'▲')));
-  const card=slotCard(current,cardWidth,{hot:true});for(const line of card)lines.push(center(line));
-  lines.push(center(hotPink('▶▶▶')+gold('═'.repeat(panel-6))+hotPink('◀◀◀')),center(gold('╚'+'═'.repeat(panel-2)+'╝')));
-  lines.splice(lines.length-1,0,center(reelStripRow(at(1),panel-4,'▼')),center(reelStripRow(at(2),panel-4,'▼')));
-  const progress=Math.round(((final?positions.length:frame+1)/positions.length)*(panel-12));
-  lines.push(center(final?winMeta.paint(`${winMeta.glyph} ${modelLabel(winner.model)} ${winMeta.glyph}`):royalRed('▰'.repeat(progress))+burgundy('▱'.repeat(panel-12-progress))));
-  lines.push(center(final?shineText('1,000,000 TOKENS UNLOCKED',winMeta,frame%24):dim(frame<fast?'REEL AT MAXIMUM VELOCITY':'DECELERATING · WATCH THE PAYLINE')));
-  lines.push(center(final?hotPink('✦ ✦ ✦ EQUIPPED AND READY ✦ ✦ ✦'):cyan(`${modelSigils[current.model]||'AI'} CARD ${String(index+1).padStart(2,'0')} / ${candidates.length}`)));
-  stdout.write('\x1b[H'+lines.slice(0,rows).map(line=>'\x1b[2K'+line).join('\n'));
+  const edge='+'+'-'.repeat(panel-2)+'+',paintFrame=framePaint(frame);
+  const title=final?(winMeta.rank===6?'MYTHIC JACKPOT':'MODEL LOCKED'):'LOOTLM MODEL DRAW';
+  const lines=[paintFrame(edge),paintFrame('|')+royalBold(centeredPlain(title,panel-2))+paintFrame('|'),paintFrame('|')+bold(centeredPlain('ONE PULL = ONE MODEL + 1,000,000 TOKENS',panel-2))+paintFrame('|'),paintFrame(edge),row(at(-2)),row(at(-1)),row(at(0),true),row(at(1)),row(at(2)),paintFrame(edge)];
+  const ratioDone=(final?positions.length:frame+1)/positions.length,barWidth=Math.max(12,panel-28),progress=Math.round(ratioDone*barWidth),percent=String(Math.round(ratioDone*100)).padStart(3);
+  lines.push(center(`${final?winMeta.paint('LOCKED'):royalRed('SPINNING')} [${royalRed('#'.repeat(progress))}${dim('-'.repeat(barWidth-progress))}] ${percent}%`));
+  lines.push(center(final?winMeta.paint(`[${modelSigils[winner.model]||'AI'}] ${modelLabel(winner.model)} - 1,000,000 TOKENS READY`):dim(frame<fast?'WHEEL AT FULL SPEED':'DECELERATING - CENTER ROW WINS')));
+  const top=Math.max(0,Math.floor((rows-lines.length)/2));
+  stdout.write('\x1b[H'+[...Array(top).fill(''),...lines].slice(0,rows).map(line=>'\x1b[2K'+(line.startsWith('\x1b')?center(line):line.includes('|')||line.startsWith('+')?center(line):line)).join('\n'));
  };
  const ownsScreen=!immersiveScreen;
  stdout.write((ownsScreen?'\x1b[?1049h':'')+'\x1b[2J\x1b[H\x1b[?25l');
@@ -530,7 +529,7 @@ function showError(error){
 async function main(){
  if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args,{json:!!flags.json});return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.6.0\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.7.0\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});
