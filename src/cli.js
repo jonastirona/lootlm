@@ -6,6 +6,7 @@ import {createInterface} from 'node:readline/promises';
 import {stdin,stdout,stderr} from 'node:process';
 import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {centerAnsi} from './terminal-layout.js';
 
 const raw=process.argv.slice(2);
 const flags={};
@@ -255,7 +256,7 @@ async function animation(award,entries){
  if(flags.json||flags['no-animation']||!stdout.isTTY||process.env.LOOTLM_REDUCED_MOTION==='1')return;
  const candidates=entries.length?entries:[award.choice],winner=award.choice,winMeta=tier(winner.tier);
  const columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),panel=Math.min(76,columns-4),landing=candidates.findIndex(item=>item.model===winner.model);
- const center=text=>{const length=safeText(text).replace(/\x1b\[[0-9;]*m/g,'').length;return ' '.repeat(Math.max(0,Math.floor((columns-length)/2)))+text;};
+ const center=text=>centerAnsi(text,columns);
  const framePaint=frame=>[hotPink,cyan,gold][frame%3];
  const row=(choice,active=false)=>{
   const meta=tier(choice.tier),inner=panel-2,sigil=modelSigils[choice.model]||'AI',modelWidth=Math.max(8,inner-20);
@@ -529,7 +530,7 @@ function showError(error){
 async function main(){
  if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args,{json:!!flags.json});return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.7.0\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.7.1\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});

@@ -2,7 +2,7 @@
 
 LootLM has one user surface: the terminal. The short command is `loot`; `lootlm` is retained as a compatibility alias.
 
-Install the downloaded package with `npm install -g ./lootlm-0.7.0.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
+Install the downloaded package with `npm install -g ./lootlm-0.7.1.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
 
 ## First run
 
