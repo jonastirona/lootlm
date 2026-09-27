@@ -7,6 +7,7 @@ import {stdin,stdout,stderr} from 'node:process';
 import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {centerAnsi,extractSgrMouseEvents,visibleLength} from './terminal-layout.js';
+import {buildShowcaseReel,shuffleModels} from './reel.js';
 
 const raw=process.argv.slice(2);
 const flags={};
@@ -299,14 +300,13 @@ async function pullLever(entries){
 }
 async function animation(award,entries){
  if(flags.json||flags['no-animation']||!stdout.isTTY||process.env.LOOTLM_REDUCED_MOTION==='1')return;
- const candidates=entries.length?entries:[award.choice],winner=award.choice,winMeta=tier(winner.tier);
- const landing=candidates.findIndex(item=>item.model===winner.model);
- const fast=40,slow=34,positions=Array.from({length:fast},(_,i)=>(i*5)%candidates.length);
- for(let i=0;i<slow;i++)positions.push((landing-(slow-1)+i+candidates.length*4)%candidates.length);
+ const winner=award.choice,winMeta=tier(winner.tier),fast=40,slow=34,total=fast+slow;
+ const {reel:candidates,landing}=buildShowcaseReel(entries,winner,{length:total+4,landing:total+1});
+ const positions=Array.from({length:total},(_,frame)=>frame+2);
  const draw=(frame,final=false)=>{
   const index=final?landing:positions[frame];
   const lever=final?0:Math.max(0,5-Math.floor(frame/2));
-  machineFrame(candidates,index,{frame,progress:(final?positions.length:frame+1)/positions.length,phase:frame<fast?'WHEEL AT FULL SPEED':'DECELERATING - CENTER ROW WINS',final,winner,lever});
+  machineFrame(candidates,index,{frame,progress:(final?positions.length:frame+1)/positions.length,phase:frame<fast?'SHOWCASE REEL - /COLLECTION HAS EXACT ODDS':'DECELERATING - CENTER ROW WINS',final,winner,lever});
  };
  const enterScreen=!immersiveScreen&&!temporaryMachineScreen;
  if(enterScreen){stdout.write('\x1b[?1049h');temporaryMachineScreen=true;}
@@ -349,7 +349,7 @@ async function performRoll({compactOutput=false,ask=question}={}){
   stdout.write(`  ${hotPink('⚡ PULL THE LEVER ⚡')}\n  ${bold(rollTerms(info,pool))}\n  ${dim('The server locks the award before the reel moves. /collection shows exact odds.')}\n\n`);
  }
  if(!await confirmPaidRoll(info,pool,ask))return null;
- await pullLever(pool.entries);
+ await pullLever(shuffleModels(pool.entries));
  let data;
  try{
   const rollId=cfg.pendingRoll||randomUUID();cfg.pendingRoll=rollId;writeConfig();
@@ -568,7 +568,7 @@ function showError(error){
 async function main(){
  if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args,{json:!!flags.json});return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.8.0\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.8.1\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});
