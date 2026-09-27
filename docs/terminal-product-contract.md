@@ -61,6 +61,12 @@ Mythic is sidelined for the MVP. The CLI temporarily maps the old prototype tier
 
 Rarity must describe probability, not guaranteed quality or monetary value. The exact percentage remains visible in `loot odds`.
 
+## Vendor quality floor
+
+The pool may use Claude Opus 5.5 and Claude Fable, but no lower Claude or Anthropic substitution. It may use GPT Astra, but no lower GPT, OpenAI, or Codex substitution. In particular, Claude Sonnet, GPT Sol, and Codex mini are out of scope even if they are cheaper or more available.
+
+This is an allowlist rule, not a claim about current provider availability or a string-based quality ranking. Pool publication checks both the display name and provider model identifier, rejects a restricted family unless its approved marker is present, and still requires separate provider-catalog, price, resale-policy, and capability review. Existing award snapshots stay immutable; on startup, a legacy active pool that violates this floor is retired for new rolls and replaced by the safe demo pool.
+
 ## Money UX
 
 The arcade presentation can avoid dollar signs during the reveal. The transaction cannot be obscure.

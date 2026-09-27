@@ -6,7 +6,7 @@ This is an internal terminal-only build. Demo mode charges no money and labels i
 2. Install the local command with `npm link`.
 3. Run `loot login --url http://localhost:3131`. Use the invited email and the access code stored by the server at `.lootlm/access-code`.
 4. Run `loot preview`. Confirm that all five rarity treatments are distinct and that Epic and Legendary shimmer without blinking.
-5. Run `loot odds`. Confirm that every model has an exact probability and rarity label.
+5. Run `loot odds`. Confirm that every model has an exact probability and rarity label, with no Claude below Opus 5.5/Fable and no OpenAI/Codex model below GPT Astra.
 6. Run `loot roll`. The server saves the result before the animation begins; skipping or interrupting the reveal cannot reroll it.
 7. Run `loot`. Type a prompt, then use `/roll` and send a follow-up. The second model receives the current shell's conversation context.
 8. Use `/models`, `/status`, `/new`, and `/exit` to exercise the rest of the loop.

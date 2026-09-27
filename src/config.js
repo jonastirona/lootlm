@@ -21,8 +21,8 @@ export function config(env=process.env) {
     maxOutput:Math.floor(number('LOOTLM_MAX_OUTPUT',1024)),maxInputBytes:Math.floor(number('LOOTLM_MAX_INPUT_BYTES',24000))};
 }
 export const initialPool=[
-  {id:'tiny',name:'Pocket Brain',tier:'bust',weight:10,model:'qwen/qwen3-1.7b',inputPrice:0,outputPrice:0},
-  {id:'common',name:'Daily Driver',tier:'common',weight:65,model:'qwen/qwen3-8b',inputPrice:0,outputPrice:0},
-  {id:'strong',name:'Code Wizard',tier:'strong',weight:20,model:'qwen/qwen3-coder',inputPrice:0,outputPrice:0},
-  {id:'rare',name:'Mythic Mind',tier:'rare',weight:5,model:'anthropic/claude-sonnet-4',inputPrice:0,outputPrice:0}
+  {id:'tiny',name:'Qwen3 1.7B',tier:'bust',weight:10,model:'qwen/qwen3-1.7b',inputPrice:0,outputPrice:0},
+  {id:'common',name:'Qwen3 8B',tier:'common',weight:65,model:'qwen/qwen3-8b',inputPrice:0,outputPrice:0},
+  {id:'strong',name:'Qwen3 Coder',tier:'strong',weight:20,model:'qwen/qwen3-coder',inputPrice:0,outputPrice:0},
+  {id:'rare',name:'Qwen3 235B A22B',tier:'rare',weight:5,model:'qwen/qwen3-235b-a22b',inputPrice:0,outputPrice:0}
 ];

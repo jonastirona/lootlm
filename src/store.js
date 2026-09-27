@@ -1,6 +1,7 @@
 import {DatabaseSync} from 'node:sqlite';
 import {randomBytes,randomInt,createHash} from 'node:crypto';
 import {initialPool} from './config.js';
+import {modelPolicyViolation} from './model-policy.js';
 export const id=(prefix)=>prefix+'_'+randomBytes(12).toString('hex');
 export const hash=(value)=>createHash('sha256').update(value).digest('hex');
 export class Fault extends Error {constructor(status,code,message){super(message);this.status=status;this.code=code;}}
@@ -19,6 +20,7 @@ export class Store {
     CREATE TABLE IF NOT EXISTS ledger(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,award_id TEXT NOT NULL,request_id TEXT,kind TEXT NOT NULL,tokens INTEGER NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS audit(id TEXT PRIMARY KEY,actor TEXT NOT NULL,action TEXT NOT NULL,detail TEXT NOT NULL,created_at TEXT NOT NULL);`);
   if(!this.setting('pool'))this.publishPool(initialPool,'system');
+  else if(this.pool().entries.some(modelPolicyViolation))this.publishPool(initialPool,'system:model-policy');
   for(const [k,v] of [['spinsEnabled','true'],['inferenceEnabled','true'],['rareEnabled','false']])if(this.setting(k)===null)this.set(k,v);
  }
  now(){return new Date().toISOString();}
@@ -42,6 +44,7 @@ export class Store {
   const body=entries.map(e=>{
    if(!e||typeof e.id!=='string'||!/^[a-z0-9_-]{1,40}$/.test(e.id)||ids.has(e.id))fail(400,'invalid_pool','Entry IDs must be unique.');ids.add(e.id);
    if(typeof e.name!=='string'||e.name.length>80||!e.name.length||typeof e.model!=='string'||e.model.length>150||!e.model.length||!['bust','common','strong','rare'].includes(e.tier))fail(400,'invalid_pool','Invalid model metadata.');
+   const policyViolation=modelPolicyViolation(e);if(policyViolation)fail(400,'model_policy',policyViolation);
    if(!Number.isSafeInteger(e.weight)||e.weight<1||e.weight>10000)fail(400,'invalid_pool','Weights must be positive integers.');total+=e.weight;
    for(const k of ['inputPrice','outputPrice'])if(!Number.isFinite(e[k])||e[k]<0||e[k]>10000)fail(400,'invalid_pool','Prices must be USD per million tokens.');
    return {id:e.id,name:e.name,model:e.model,tier:e.tier,weight:e.weight,inputPrice:e.inputPrice,outputPrice:e.outputPrice};

@@ -12,7 +12,7 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "node --test test/*.test.js",
-    "check": "node --check src/server.js && node --check src/store.js && node --check src/providers.js && node --check src/cli.js",
+    "check": "node --check src/server.js && node --check src/store.js && node --check src/providers.js && node --check src/model-policy.js && node --check src/cli.js",
     "pack:check": "npm pack --dry-run",
     "package": "npm pack --pack-destination .."
   },

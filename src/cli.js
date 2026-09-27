@@ -357,7 +357,7 @@ async function renderPreview({withBrand=true}={}){
   {tier:'common',model:'GLM 5.3 Flash',note:'neutral silver'},
   {tier:'uncommon',model:'MiMo V2.6 Pro',note:'emerald green'},
   {tier:'rare',model:'GLM 5.3',note:'electric blue'},
-  {tier:'epic',model:'GPT-6 Sol',note:'purple light sweep'},
+  {tier:'epic',model:'Claude Opus 5.5',note:'purple light sweep'},
   {tier:'legendary',model:'GPT-6 Astra',note:'warm-gold light sweep'}
  ];
  if(withBrand)brand();

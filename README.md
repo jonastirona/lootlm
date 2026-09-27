@@ -53,8 +53,8 @@ $ loot
   roll a brain. keep the work.
 
   ✧ EPIC MODEL
-  ✦ GPT-6 SOL ✦
-  openai/gpt-6-sol
+  ✦ CLAUDE OPUS 5.5 ✦
+  anthropic/claude-opus-5.5
 
   PROJECT    my-repo
   TOKENS     ━━━━━━━━━━━━━━━───  88k available
@@ -111,10 +111,12 @@ Provider availability and distribution policy must be verified before any paid p
 | Uncommon | Gemini 3.8 Flash | 10% |
 | Rare | GLM 5.3 | 9% |
 | Rare | Grok 4.7 | 7% |
-| Epic | GPT-6 Sol | 6% |
+| Epic | Approved non-Claude/non-OpenAI frontier replacement (pending) | 6% |
 | Epic | Claude Opus 5.5 | 4% |
 | Legendary | Claude Fable 5.1 | 2% |
 | Legendary | GPT-6 Astra | 2% |
+
+Claude is allowlisted at Opus 5.5 and Fable only. OpenAI/Codex is allowlisted at GPT Astra only. Claude Sonnet, GPT Sol, Codex mini, and other lower substitutions are rejected during pool publication. The pending 6% slot must be filled with an approved non-Claude/non-OpenAI model before this target pool can ship.
 
 ## Existing API and safety controls
 
