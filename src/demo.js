@@ -17,7 +17,7 @@ export async function runDemo(args=[]){
   const url=`http://127.0.0.1:${server.address().port}`;
   const user=store.user('demo@lootlm.local');
   const key=store.credential(user,'key','Temporary demo').key;
-  process.stdout.write('\n  DEMO SANDBOX · simulated responses · no charges\n  Try /roll, a prompt, /models, /odds, /preview, /status, /exit.\n  This temporary vault is cleared when you exit.\n\n');
+  process.stdout.write('\n  Demo · simulated responses · no charges · vault resets on exit.\n\n');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./cli.js',import.meta.url)),...(args.length?args:['play'])],{
    stdio:'inherit',env:{...process.env,LOOTLM_URL:url,LOOTLM_API_KEY:key,LOOTLM_CONFIG_DIR:path.join(dir,'client'),OPENROUTER_API_KEY:'',LOOTLM_PROVIDER:'demo',LOOTLM_LIVE_ENABLED:'false'}
   });

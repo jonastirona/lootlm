@@ -149,12 +149,7 @@ async function writeModelHeadline(choice,meta,{animate=false,indent='  '}={}){
 }
 
 function brand(mode){
- const width=42,title='◆ LOOTLM',rest='─'.repeat(width-3-title.length-1);
- const detail=` STOCHASTIC INFERENCE${mode?` · ${mode.toUpperCase()}`:''}`.padEnd(width);
- stdout.write(`\n  ${burgundy('╭── ')}${gold('◆')} ${royalBold('LOOTLM')}${burgundy(' '+rest+'╮')}\n`);
- stdout.write(`  ${burgundy('│')}${mode==='demo'?gold(detail):royalRed(detail)}${burgundy('│')}\n`);
- stdout.write(`  ${burgundy('╰'+'─'.repeat(width)+'╯')}\n`);
- stdout.write(`  ${dim('roll a brain. keep the work.')}\n\n`);
+ stdout.write(`\n  ${royalBold('lootlm')}${mode?dim(' · '+mode):''}\n\n`);
 }
 function rule(){const width=Math.min(58,termWidth()-4);stdout.write('  '+burgundy('─'.repeat(Math.max(0,width-2)))+gold('◆')+burgundy('─')+'\n');}
 async function question(prompt,secret=false){
@@ -198,64 +193,44 @@ function renderStatus(info,pool,awards,{withBrand=true}={}){
  if(active&&cfg.model!==active.id){cfg.model=active.id;writeConfig();}
  if(withBrand)brand(info.provider);
  if(active){
-  const meta=tier(active.choice.tier);const available=active.available??active.remaining;
-  stdout.write(`  ${meta.paint(meta.glyph+' '+meta.label)} ${dim('MODEL')}\n`);
-  stdout.write(`  ${modelHeadline(active.choice,meta)}\n`);
-  stdout.write(`  ${dim(active.choice.model)}\n\n`);
-  stdout.write(label('project',bold(projectName())));
-  stdout.write(label('tokens',`${meter(available,active.total)}  ${bold(compact(available))} ${dim('available')}`));
- }else{
-  stdout.write(`  ${gold('NO MODEL EQUIPPED')}\n  ${dim('Roll once to attach a model to this project.')}\n\n`);
-  stdout.write(label('project',bold(projectName())));
- }
- stdout.write(label('vault',`${awards.length} ${awards.length===1?'model':'models'} · ${new URL(base()).host}`));
- const wallet=walletFrom(info);
- if(wallet)stdout.write(label('balance',`${bold(moneyMinor(wallet.balanceMinor))} · ${rollCostMinor(info)===null?'debit unavailable':moneyMinor(rollCostMinor(info))+' per roll'}`));
- rule();
- if(active)stdout.write(`  ${gold('›')} ${bold('Type a prompt')} in ${royalBold('loot')}  ${dim('or')}  ${bold('loot chat "…"')}\n`);
- else stdout.write(`  ${gold('›')} ${bold('loot roll')}  ${dim(rollTerms(info,pool))}\n`);
- stdout.write(`  ${dim('odds: loot odds  ·  models: loot inventory')}\n\n`);
+  const meta=tier(active.choice.tier);
+  stdout.write(`  ${modelHeadline(active.choice,meta)} ${meta.paint('· '+meta.label)}\n  ${dim(compact(active.available??active.remaining)+' tokens left · '+awards.length+' saved models')}\n`);
+ }else stdout.write(`  ${gold('NO MODEL EQUIPPED')} ${dim('· /roll to start')}\n  ${dim(rollTerms(info,pool))}\n`);
+ const wallet=walletFrom(info);if(wallet)stdout.write(`  ${moneyMinor(wallet.balanceMinor)} balance · ${rollCostMinor(info)===null?'debit unavailable':moneyMinor(rollCostMinor(info))+' / roll'}\n`);
+ stdout.write('\n');
 }
-async function animation(award){
- if(flags.json||flags['no-animation']||!stdout.isTTY||(stdout.columns&&stdout.columns<54)||process.env.LOOTLM_REDUCED_MOTION==='1')return;
- const meta=tier(award.choice.tier),symbols=Object.values(rarities).map(item=>item.glyph);let rendered=false;
+async function animation(award,entries){
+ if(flags.json||flags['no-animation']||!stdout.isTTY||(stdout.columns&&stdout.columns<44)||process.env.LOOTLM_REDUCED_MOTION==='1')return;
+ const candidates=entries.length?entries:[award.choice];
+ const width=Math.min(58,(stdout.columns||80)-8);
+ const fit=(text,size)=>text.length>size?text.slice(0,size-1)+'…':text.padEnd(size);
+ const row=(choice,selected)=>{
+  const meta=tier(choice.tier),name=fit(modelLabel(choice.model),Math.max(12,width-14));
+  return `  ${selected?gold('›'): ' '} ${meta.paint(name+' '+meta.label.padEnd(9))}${selected?gold(' ‹'):''}`;
+ };
+ const frames=32,strip=Array.from({length:frames+3},(_,i)=>candidates[i%candidates.length]);
+ strip[frames]=award.choice;
  stdout.write('\x1b[?25l');
  const restore=()=>stdout.write('\x1b[?25h');
- const interrupt=()=>{restore();process.exit(130);};
- process.once('SIGINT',interrupt);
+ const interrupt=()=>{restore();process.exit(130);};process.once('SIGINT',interrupt);
  try{
-  for(let frame=0;frame<30;frame++){
-   const locks=[16,21,26].map(stop=>frame>=stop);
-   const cells=locks.map((locked,index)=>locked?meta.glyph:symbols[(frame+index*2)%symbols.length]);
-   const progress=Math.min(24,Math.floor(frame/29*24));
-   const phase=frame<16?'ROLLING':frame<26?'LOCKING':'SECURED';
-   const reel=`  ${burgundy('│')}     ${locks[0]?meta.paint(cells[0]):royalRed(cells[0])}     ${burgundy('│')}     ${locks[1]?meta.paint(cells[1]):royalRed(cells[1])}     ${burgundy('│')}     ${locks[2]?meta.paint(cells[2]):royalRed(cells[2])}     ${burgundy('│')}`;
-   const lines=[
-    '  '+burgundy('╭─────────── ')+gold('LOOT ROLL')+burgundy(' ───────────╮'),
-    '  '+burgundy('│')+dim('       server result locked       ')+burgundy('│'),
-    '  '+burgundy('├───────────┬───────────┬───────────┤'),
-    reel,
-    '  '+burgundy('├───────────┴───────────┴───────────┤'),
-    `  ${burgundy('│')}  ${royalRed('━'.repeat(progress))}${burgundy('─'.repeat(24-progress))}  ${gold(phase.padEnd(7))} ${burgundy('│')}`,
-    '  '+burgundy('╰───────────────────────────────────╯')
-   ];
-   if(rendered)stdout.write(`\x1b[${lines.length}A`);
+  for(let frame=0;frame<frames;frame++){
+   if(frame)stdout.write('\x1b[3A');
+   const lines=[row(strip[frame],false),row(strip[frame+1],true),row(strip[frame+2],false)];
    for(const line of lines)stdout.write('\x1b[2K'+line+'\n');
-   rendered=true;
-   await sleep(frame>25?90:frame>15?65:42);
+   await sleep(frame>25?100+(frame-25)*22:45);
   }
+  await sleep(200);
+  stdout.write('\x1b[3A\x1b[J');
  }finally{process.removeListener('SIGINT',interrupt);restore();}
 }
 async function renderResult(award,replayed=false,roll){
  const meta=tier(award.choice.tier),available=award.available??award.remaining;
- stdout.write(`\n  ${meta.paint(meta.glyph+' '+meta.label+' ROLL')} ${replayed?dim('· recovered safely'):''}\n`);
+ stdout.write(`\n  ${meta.paint(meta.glyph+' '+meta.label)}${replayed?dim(' · recovered'):''}\n`);
  await writeModelHeadline(award.choice,meta,{animate:true});
- stdout.write(`  ${dim(award.choice.model)}\n\n`);
- stdout.write(label('allocation',`${meter(available,award.total)}  ${bold(fmt(available))}`));
- stdout.write(label('roll id',dim(short(award.id))));
- if(Number.isSafeInteger(roll?.balanceAfterMinor))stdout.write(label('balance',`${moneyMinor(roll.balanceAfterMinor)} remaining`));
- rule();
- stdout.write(`  ${gold('ACTIVE')} ${dim('Your next prompt routes here.')}\n  ${dim('Try')} ${royalBold('loot')} ${dim('or')} ${bold('loot chat "What should we build?"')}\n\n`);
+ stdout.write(`  ${dim(compact(available)+' tokens · equipped')}\n`);
+ if(Number.isSafeInteger(roll?.balanceAfterMinor))stdout.write(`  ${moneyMinor(roll.balanceAfterMinor)} balance\n`);
+ stdout.write('\n');
 }
 async function confirmPaidRoll(info,pool,ask=question){
  const wallet=walletFrom(info),cost=rollCostMinor(info);
@@ -276,13 +251,13 @@ async function performRoll({compactOutput=false,ask=question}={}){
  const [info,pool]=await Promise.all([json('/internal/me'),json('/internal/pool')]);
  if(!flags.json&&!compactOutput){
   brand(info.provider);
-  stdout.write(`  ${dim(rollTerms(info,pool))}\n  ${dim('The server chooses first; the reveal cannot change the result.')}\n\n`);
+  stdout.write(`  ${dim(rollTerms(info,pool))}\n  ${dim('Reel preview is cosmetic; /odds shows probabilities.')}\n\n`);
  }
  if(!await confirmPaidRoll(info,pool,ask))return null;
  const rollId=cfg.pendingRoll||randomUUID();cfg.pendingRoll=rollId;writeConfig();
  const data=await json('/internal/spins',{body:{},headers:{'Idempotency-Key':rollId}});
  cfg.pendingRoll=null;cfg.model=data.award.id;writeConfig();
- await animation(data.award);
+ await animation(data.award,pool.entries);
  if(flags.json)stdout.write(JSON.stringify(data)+'\n');else await renderResult(data.award,data.replayed,data.roll);
  return data.award;
 }
@@ -334,13 +309,11 @@ async function topup(){
 function renderInventory(awards,{withBrand=true}={}){
  if(withBrand)brand();
  if(!awards.length){stdout.write(`  ${gold('Your vault is empty.')}\n  Start with ${bold('loot roll')}.\n\n`);return;}
- const rows=[['','MODEL','RARITY','AVAILABLE','ID']];
  awards.forEach((award,index)=>{
   const meta=tier(award.choice.tier);
-  rows.push([award.id===cfg.model?'●':' ',`${index+1}. ${modelLabel(award.choice.model)}`,meta.label,compact(award.available),short(award.id)]);
+  stdout.write(`  ${award.id===cfg.model?gold('›'):' '} ${index+1}. ${meta.paint(modelLabel(award.choice.model))} ${dim('· '+meta.label+' · '+compact(award.available)+' tokens')}\n`);
  });
- table(rows);
- stdout.write(`\n  ${dim('● active  ·  select with')} ${bold('loot use <number>')}\n  ${dim('Full award IDs remain available with --json.')}\n\n`);
+ stdout.write(`\n  ${dim('/use <number> to equip · › active')}\n\n`);
 }
 function renderOdds(pool,{withBrand=true}={}){
  if(withBrand)brand();
@@ -349,8 +322,7 @@ function renderOdds(pool,{withBrand=true}={}){
   const meta=tier(entry.tier),percent=entry.probability*100,filled=Math.round(percent/5);
   stdout.write(`  ${String(percent.toFixed(percent%1?1:0)+'%').padStart(5)}  ${meta.paint('━'.repeat(filled))}${dim('─'.repeat(20-filled))}  ${meta.paint(meta.glyph)} ${modelLabel(entry.model)} ${dim('· '+meta.label)}\n`);
  }
- stdout.write(`\n  ${dim('RARITY LADDER')}\n  ${rarities.common.paint('◆ COMMON')}  ${rarities.uncommon.paint('⬟ UNCOMMON')}  ${rarities.rare.paint('✦ RARE')}\n  ${rarities.epic.paint('✧ EPIC')}    ${rarities.legendary.paint('✹ LEGENDARY')}\n`);
- stdout.write(`\n  ${gold('EVERY ROLL')} ${allocationCopy(pool)}\n  ${dim('Independent server-side draw · animation is cosmetic · odds are snapshotted')}\n  ${dim('pool '+short(pool.version))}\n\n`);
+ stdout.write(`\n  ${dim(allocationCopy(pool)+' per roll · reel preview is cosmetic')}\n\n`);
 }
 async function renderPreview({withBrand=true}={}){
  const samples=[
@@ -394,7 +366,7 @@ async function streamChat({model,choice,messages,maxTokens,showHeader=true}){
  });
  let buffer='',usage=null,answer='';const decoder=new TextDecoder();
  if(showHeader){
-  if(choice){const meta=tier(choice.tier);stdout.write(`\n  ${meta.paint(meta.glyph+' '+meta.label)} ${dim('MODEL')}\n  ${modelHeadline(choice,meta)}\n\n`);}
+  if(choice){const meta=tier(choice.tier);stdout.write(`\n  ${meta.paint(modelLabel(choice.model))}\n`);}
   else stdout.write(`\n  ${gold('◆ MODEL')}\n\n`);
  }
  const consume=line=>{
@@ -420,7 +392,7 @@ async function play(){
  let [info,pool,allowances]=await Promise.all([json('/internal/me'),json('/internal/pool'),json('/v1/allowances')]);
  let awards=allowances.data;
  renderStatus(info,pool,awards);
- stdout.write(`  ${dim('Session context follows you across rolls while this shell is open.')}\n  ${dim('/help for commands · /exit to leave')}\n\n`);
+ stdout.write(`  ${dim('/roll  /models  /odds  /help  /exit · or type a prompt')}\n\n`);
  const reader=createInterface({input:stdin,output:stdout,terminal:true});let messages=[];
  try{
   while(true){
@@ -450,7 +422,7 @@ async function play(){
     if(action==='use'){
      const award=await resolveAward(value,awards);cfg.model=award.id;writeConfig();
      const meta=tier(award.choice.tier);
-     stdout.write(`  ${gold('ACTIVE')} ${modelHeadline(award.choice,meta)} ${dim('· session context kept')}\n  ${dim(award.choice.model)}\n\n`);continue;
+     stdout.write(`  ${gold('ACTIVE')} ${modelHeadline(award.choice,meta)} ${dim('· context kept')}\n\n`);continue;
     }
     if(action==='new'){messages=[];stdout.write(`  ${gold('NEW SESSION')} ${dim('Conversation context cleared; model unchanged.')}\n\n`);continue;}
     if(action==='clear'){stdout.write('\x1bc');renderStatus(info,pool,awards);continue;}
@@ -492,7 +464,7 @@ function showError(error){
 async function main(){
  if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args);return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.2.1\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.2.2\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});
