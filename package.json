@@ -1,6 +1,6 @@
 {
   "name": "lootlm",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Private model slots and inference gateway, with a terminal arcade.",
   "type": "module",
   "private": false,

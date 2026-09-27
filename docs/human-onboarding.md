@@ -5,11 +5,10 @@ This is an internal terminal-only build. Demo mode charges no money and labels i
 1. Start the API server with `npm start`.
 2. Install the local command with `npm link`.
 3. Run `loot login --url http://localhost:3131`. Use the invited email and the access code stored by the server at `.lootlm/access-code`.
-4. Run `loot preview`. Confirm that all five rarity treatments are distinct and that Epic and Legendary shimmer without blinking.
-5. Run `loot odds`. Confirm that every model has an exact probability and rarity label, with no Claude below Opus 5.5/Fable and no OpenAI/Codex model below GPT Astra.
-6. Run `loot roll`. The server saves the result before the animation begins; skipping or interrupting the reveal cannot reroll it.
-7. Run `loot`. Type a prompt, then use `/roll` and send a follow-up. The second model receives the current shell's conversation context.
-8. Use `/models`, `/status`, `/new`, and `/exit` to exercise the rest of the loop.
+4. Run `loot collection`. Confirm that all six tier treatments, tier totals, exact model probabilities, and 24 distinct card sigils appear on one screen.
+5. Run `loot roll`. Confirm that three reels spin independently, lock in sequence, and place three copies of the awarded model on the center payline. The server saves the result before animation begins; skipping or interrupting the reveal cannot reroll it.
+6. Run `loot`. Type a prompt, then use `/roll` and send a follow-up. The second model receives the current shell's conversation context.
+7. Use `/models`, `/status`, `/new`, and `/exit` to exercise the rest of the loop.
 
 The current prototype grants one million shared test tokens per roll. That is not the target paid contract of roughly 100k fresh input plus 20k output. Conversation continuity currently lasts only while the interactive shell is open. A clean restart does not yet restore project context.
 

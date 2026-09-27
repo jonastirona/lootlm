@@ -12,20 +12,22 @@ The old `public/` prototype is preserved only as unserved design history. It is 
 
 ## Visual system
 
-The interface should feel like a restrained royal arcade, not a neon casino. Use the brand palette structurally:
+The interface is intentionally excessive: a neon model casino rendered in Terminal. Use animated bulbs, heavy cabinet borders, hot-pink and cyan marquees, gold paylines, flashing payout language, and rarity-colored cards. The spectacle must remain legible and restore the terminal cleanly after every animation.
 
 | Role | Color | Hex | Use |
 | --- | --- | --- | --- |
 | Frame | Burgundy | `#8C2F4A` | Outlines, dividers, inactive meter tracks |
 | Energy | Royal red | `#C8324D` | Wordmark, active meters, prompt identity, reel motion |
 | Action | Antique gold | `#D4AF37` | Primary actions, section headings, success states |
+| Flash | Hot pink | `#FF42AD` | Bulbs, payline arrows, payout banners |
+| Voltage | Cyan | `#47DCFF` | Marquee lights, live-machine status |
 | Error | Signal red | `#E84C5B` | Errors only |
 
-Gold is an interaction and brand accent; it does not imply a Legendary result. Legendary uses its own warmer gold and always appears with its `✹` glyph and uppercase label. Outside a rarity result, do not use the Common, Uncommon, Rare, Epic, or Legendary colors decoratively. `NO_COLOR=1` must preserve the same hierarchy through glyphs, labels, weight, spacing, and borders.
+Gold is an interaction and cabinet accent; it does not imply a Legendary result. Legendary uses its own warmer gold and always appears with its `✹` glyph and uppercase label. `NO_COLOR=1` must preserve the same hierarchy through glyphs, labels, weight, spacing, and borders.
 
-The actual model is the headline. User-facing terminal views derive that headline from the provider model identifier and keep the exact identifier immediately underneath when space allows. Pool aliases may remain in snapshots for API compatibility, but names such as `Code Wizard`, `Daily Driver`, or `Mythic Mind` must not appear in the human CLI.
+The actual model is the headline. Every collection model has a stable two-character card sigil, provider label, model title, rarity frame, glyph, and color. User-facing views derive the title from the provider model identifier. Pool aliases may remain in snapshots for API compatibility, but names such as `Code Wizard`, `Daily Driver`, or `Mythic Mind` must not appear in the human CLI.
 
-Epic and Legendary receive a short light sweep when revealed. Epic sweeps from deep purple to pale lavender; Legendary sweeps from warm gold to champagne. Do not blink, loop indefinitely, or animate the whole terminal. Reduced-motion mode and noninteractive output use a single static glint, and the rarity label and glyph continue carrying the meaning without color.
+A roll opens a full-screen three-reel cabinet. Each reel cycles through actual collection cards at a different rate, stops independently, and lands the persisted award on the center payline. The payout sequence shows three matching cards. Epic, Legendary, and Mythic titles receive an additional light sweep. Reduced-motion, narrow-terminal, and noninteractive output skip the cabinet and render the result directly.
 
 ## Core loop
 
@@ -60,7 +62,7 @@ Rarity is redundant by design: color, glyph, and uppercase label always appear t
 
 The CLI retains mappings for old prototype tier values only so historical award snapshots remain readable.
 
-Rarity must describe probability, not guaranteed quality or monetary value. The exact percentage remains visible in `loot odds`.
+Rarity must describe probability, not guaranteed quality or monetary value. Tier and per-model percentages remain visible together in `loot collection`.
 
 ## Vendor allowlist
 

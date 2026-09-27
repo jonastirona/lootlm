@@ -34,7 +34,7 @@ export function createApp(cfg,options={}){
   res.cookie('lootlm_session',session.key,{httpOnly:true,sameSite:'strict',secure:cfg.secureCookie,maxAge:7*86400000,path:'/'});
   res.json({user});
  });
- app.get('/health',(_req,res)=>res.json({ok:true,provider:cfg.provider,version:'0.3.0'}));
+ app.get('/health',(_req,res)=>res.json({ok:true,provider:cfg.provider,version:'0.4.0'}));
  app.use(['/v1','/internal','/auth/logout'],(req,res,next)=>{
   const bearer=req.get('authorization')?.match(/^Bearer (.+)$/)?.[1];
   const cookie=req.headers.cookie?.split(';').map(s=>s.trim()).find(s=>s.startsWith('lootlm_session='))?.slice(15);
@@ -44,7 +44,7 @@ export function createApp(cfg,options={}){
  });
  const admin=(req,_res,next)=>{if(!cfg.admins.includes(req.user.email))reject(403,'admin_required','Administrator access required.');next();};
  app.post('/auth/logout',(req,res)=>{store.revoke(req.user,req.user.credential_id);res.clearCookie('lootlm_session',{path:'/'});res.json({ok:true});});
- app.get('/internal/download',(req,res)=>{const file=path.join(dirname,'../../lootlm-0.3.0.tgz');if(!fs.existsSync(file))reject(404,'package_missing','Build the CLI artifact with npm run package first.');res.download(file,'lootlm-0.3.0.tgz');});
+ app.get('/internal/download',(req,res)=>{const file=path.join(dirname,'../../lootlm-0.4.0.tgz');if(!fs.existsSync(file))reject(404,'package_missing','Build the CLI artifact with npm run package first.');res.download(file,'lootlm-0.4.0.tgz');});
  app.get('/internal/me',(req,res)=>res.json({user:{id:req.user.id,email:req.user.email},admin:cfg.admins.includes(req.user.email),provider:cfg.provider,liveEnabled:cfg.liveEnabled,maxOutput:cfg.maxOutput,dailyUsd:cfg.dailyUsd}));
  app.get('/internal/pool',(req,res)=>{const supplier=req.query.supplier||cfg.provider;if(!['demo','openrouter'].includes(supplier))reject(400,'invalid_supplier','Unknown supplier.');const pool=store.pool(supplier),total=pool.entries.reduce((n,e)=>n+e.weight,0);res.json({...pool,entries:pool.entries.map(e=>({...e,probability:e.weight/total})),tokens:1000000});});
  const idem=req=>{const value=req.get('idempotency-key');if(!value||value.length>150||!/^[-a-zA-Z0-9_:]+$/.test(value))reject(400,'idempotency_required','Send an Idempotency-Key header (up to 150 characters).');return value;};

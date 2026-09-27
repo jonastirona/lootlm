@@ -11,7 +11,9 @@ LootLM is stochastic inference in the terminal: fund an account, roll into one m
 This branch contains a working terminal UX over Jonas's original API:
 
 - `loot` opens an interactive prompt shell; `lootlm` remains a compatibility alias.
-- The interface uses burgundy framing, a royal-red wordmark and meters, and antique-gold actions for a restrained royal arcade identity.
+- The interface deliberately uses an obnoxious model-casino identity: animated bulbs, neon marquees, heavy gold cabinet borders, flashing paylines, and oversized payout language.
+- Every one of the 24 models has a stable terminal card with its own two-character sigil, provider label, model title, rarity frame, and color treatment.
+- Rolls use a full-screen three-reel slot cabinet. The reels move independently, stop one at a time, and align three copies of the persisted award on the center payline.
 - The real model is always the headline; internal pool nicknames such as `Code Wizard` never appear in the human CLI.
 - Epic, Legendary, and Mythic models receive an animated light sweep during reveals and a static glint when motion is reduced.
 - The selected model, project, token allocation, published odds, vault, usage, and errors are legible in-terminal.
@@ -47,19 +49,18 @@ The local access code is generated at `.lootlm/access-code`. Runtime data lives 
 ```text
 $ loot
 
-  ╭── ◆ LOOTLM ──────────────────────────────╮
-  │ STOCHASTIC INFERENCE                     │
-  ╰──────────────────────────────────────────╯
-  roll a brain. keep the work.
+  ● ✦ ● ✦ ● ✦ ●
+  ╔══════════════════════════════════════╗
+  ║            ✦ L O O T L M ✦         ║
+  ║        MODEL CASINO // DEMO          ║
+  ╚══════════════════════════════════════╝
 
-  ✧ EPIC MODEL
-  ✦ CLAUDE OPUS 5.5 ✦
-  anthropic/claude-opus-5.5
+  ⚡ ACTIVE PAYLINE ⚡
+   ╔══════[O5] ANTHROPIC══════╗
+   ║      CLAUDE OPUS 5.5     ║
+   ╚════✹ LEGENDARY ✹═════════╝
 
-  PROJECT    my-repo
-  TOKENS     ━━━━━━━━━━━━━━━───  88k available
-
-  loot › /odds
+  loot › /collection
   loot › /roll
   loot › Review the auth changes in this repository.
 ```
@@ -68,8 +69,7 @@ Inside the shell:
 
 - `/roll` rolls another model without clearing the open conversation.
 - `/models` lists saved model allocations; `/use N` equips one.
-- `/odds` shows exact server-published probabilities.
-- `/preview` shows all five rarity treatments and the Epic/Legendary shimmer.
+- `/collection` combines the 24-card catalog, owned state, capabilities, tier totals, and exact per-model probabilities.
 - `/status` shows the model headline, project, and remaining allocation.
 - `/new` clears in-memory conversation context without changing models.
 - `/help` lists commands; `/exit` leaves the shell.
@@ -78,8 +78,7 @@ One-shot commands are also available:
 
 ```sh
 loot status
-loot odds
-loot preview
+loot collection
 loot inventory
 loot use 2
 loot chat "Give me an unusual app idea."

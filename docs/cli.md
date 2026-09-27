@@ -2,13 +2,13 @@
 
 LootLM has one user surface: the terminal. The short command is `loot`; `lootlm` is retained as a compatibility alias.
 
-Install the downloaded package with `npm install -g ./lootlm-0.3.0.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
+Install the downloaded package with `npm install -g ./lootlm-0.4.0.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
 
 ## First run
 
 ```sh
 loot login --url http://localhost:3131
-loot odds
+loot collection
 loot roll
 loot
 ```
@@ -20,8 +20,6 @@ Running `loot` with no subcommand opens the interactive shell. A prompt uses the
 /models     inspect saved allocations
 /collection browse all 24 models, capabilities, and exact odds
 /use 2      equip model 2
-/odds       inspect exact published probabilities
-/preview    preview every rarity treatment
 /status     show project, model, and allocation
 /new        clear open-session conversation context
 /clear      clear and redraw the terminal
@@ -35,7 +33,6 @@ Current open-session continuity is not durable project persistence. Closing the 
 ```sh
 loot status
 loot collection
-loot preview
 loot inventory
 loot use 2
 loot chat "Write a binary search" --max-tokens 256
@@ -49,7 +46,9 @@ loot logout
 
 The latest roll becomes active. `loot use` accepts the displayed inventory number, full award ID, or displayed short ID.
 
-`loot collection` shows the 24 Discovery 01 models, exact per-model odds, owned status, and catalog-advertised tool/context metadata. `loot preview` renders all six tiers side by side without login or a server. It demonstrates the Epic, Legendary, and Mythic light sweep in a color terminal. `--no-animation`, `LOOTLM_REDUCED_MOTION=1`, and `NO_COLOR=1` preserve a static labeled treatment.
+`loot collection` is the single collection and probability surface. It shows all 24 model cards, tier totals, exact per-model odds, owned status, and catalog-advertised tool/context metadata. The redundant odds command and standalone rarity preview were removed; probabilities and rarity treatments now appear on the model cards and in the reel itself.
+
+An animated roll uses a full-screen, three-reel slot cabinet. Every model has a stable sigil and tier-specific card frame. The three reels move independently, lock sequentially on the center payline, and finish on three copies of the persisted award. `--no-animation`, `LOOTLM_REDUCED_MOTION=1`, and narrow or noninteractive terminals skip the cabinet without changing the result.
 
 ## Login and credentials
 
@@ -62,7 +61,7 @@ Logout attempts to revoke the saved CLI key and then removes it locally.
 ## Output modes
 
 - Interactive chrome uses burgundy framing, royal-red activity, and antique-gold actions. Rarity colors are reserved for model rarity and always paired with a glyph and label.
-- `--json` is supported for roll, inventory, odds, status, usage, keys, login, and chat.
+- `--json` is supported for roll, inventory, collection, status, usage, keys, login, and chat.
 - `--no-animation` or `LOOTLM_REDUCED_MOTION=1` skips the reveal.
 - Noninteractive or narrow terminals skip animation automatically.
 - `NO_COLOR=1` removes ANSI color; rarity glyphs and labels remain.
@@ -99,4 +98,4 @@ loot admin resolve --id req_ID --input 20 --output 40 --cost 0.001 --note "Verif
 
 ## No-setup demo
 
-Run `loot demo` for an isolated local sandbox with automatic login. No upstream key, live requests or payments are used. Try `/roll`, a prompt, `/models`, `/odds`, `/preview`, `/status`, then `/exit`. The temporary vault and credentials are removed on exit; your normal account configuration is unchanged. Responses are simulated echoes, not real model intelligence. `loot demo status` runs a single command in a fresh sandbox.
+Run `loot demo` for an isolated local sandbox with automatic login. No upstream key, live requests or payments are used. Try `/roll`, a prompt, `/models`, `/collection`, `/status`, then `/exit`. The temporary vault and credentials are removed on exit; your normal account configuration is unchanged. Responses are simulated echoes, not real model intelligence. `loot demo status` runs a single command in a fresh sandbox.
