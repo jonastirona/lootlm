@@ -10,6 +10,19 @@ The only browser exception is a payment processor's hosted checkout. `loot topup
 
 The old `public/` prototype is preserved only as unserved design history. It is excluded from the npm package and the API root returns a JSON 404.
 
+## Visual system
+
+The interface should feel like a restrained royal arcade, not a neon casino. Use the brand palette structurally:
+
+| Role | Color | Hex | Use |
+| --- | --- | --- | --- |
+| Frame | Burgundy | `#8C2F4A` | Outlines, dividers, inactive meter tracks |
+| Energy | Royal red | `#C8324D` | Wordmark, active meters, prompt identity, reel motion |
+| Action | Antique gold | `#D4AF37` | Primary actions, section headings, success states |
+| Error | Signal red | `#E84C5B` | Errors only |
+
+Gold is an interaction and brand accent; it does not imply a Legendary result. Legendary uses its own warmer gold and always appears with its `✹` glyph and uppercase label. Outside a rarity result, do not use the Common, Uncommon, Rare, Epic, or Legendary colors decoratively. `NO_COLOR=1` must preserve the same hierarchy through glyphs, labels, weight, spacing, and borders.
+
 ## Core loop
 
 ```text
@@ -32,13 +45,13 @@ The animation never computes or alters the result. The server commits the roll a
 
 Rarity is redundant by design: color, glyph, and uppercase label always appear together.
 
-| Rarity | ANSI 256 | Glyph | Target entries |
-| --- | ---: | :---: | --- |
-| Common | 250 gray | ◆ | 25%, 20% |
-| Uncommon | 114 green | ⬟ | 15%, 10% |
-| Rare | 75 blue | ✦ | 9%, 7% |
-| Epic | 141 purple | ✧ | 6%, 4% |
-| Legendary | 214 gold | ✹ | 2%, 2% |
+| Rarity | Terminal color | Glyph | Target entries |
+| --- | --- | :---: | --- |
+| Common | ANSI 250 gray | ◆ | 25%, 20% |
+| Uncommon | ANSI 114 green | ⬟ | 15%, 10% |
+| Rare | ANSI 75 blue | ✦ | 9%, 7% |
+| Epic | ANSI 141 purple | ✧ | 6%, 4% |
+| Legendary | Warm gold `#E6A431` | ✹ | 2%, 2% |
 
 Mythic is sidelined for the MVP. The CLI temporarily maps the old prototype tiers `bust` to Common and `strong` to Epic; Jonas should remove those legacy values when the ten-model pool lands.
 

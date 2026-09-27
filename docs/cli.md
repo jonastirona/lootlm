@@ -55,6 +55,7 @@ Logout attempts to revoke the saved CLI key and then removes it locally.
 
 ## Output modes
 
+- Interactive chrome uses burgundy framing, royal-red activity, and antique-gold actions. Rarity colors are reserved for model rarity and always paired with a glyph and label.
 - `--json` is supported for roll, inventory, odds, status, usage, keys, login, and chat.
 - `--no-animation` or `LOOTLM_REDUCED_MOTION=1` skips the reveal.
 - Noninteractive or narrow terminals skip animation automatically.

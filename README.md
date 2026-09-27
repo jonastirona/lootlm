@@ -11,6 +11,7 @@ LootLM is stochastic inference in the terminal: fund an account, roll into one m
 This branch contains a working terminal UX over Jonas's original API:
 
 - `loot` opens an interactive prompt shell; `lootlm` remains a compatibility alias.
+- The interface uses burgundy framing, a royal-red wordmark and meters, and antique-gold actions for a restrained royal arcade identity.
 - The selected model, project, token allocation, published odds, vault, usage, and errors are legible in-terminal.
 - Conversation context follows the user across rolls while that shell remains open.
 - Common, Uncommon, Rare, Epic, and Legendary each have a distinct ANSI color, glyph, and text label. Legendary is reserved for each 2% pool entry. Mythic is not in the MVP.
@@ -44,7 +45,9 @@ The local access code is generated at `.lootlm/access-code`. Runtime data lives 
 ```text
 $ loot
 
-  ◈  lootlm  / STOCHASTIC INFERENCE
+  ╭── ◆ LOOTLM ──────────────────────────────╮
+  │ STOCHASTIC INFERENCE                     │
+  ╰──────────────────────────────────────────╯
   roll a brain. keep the work.
 
   PROJECT    my-repo

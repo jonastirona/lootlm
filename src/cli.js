@@ -32,15 +32,16 @@ catch(error){if(error.code!=='ENOENT')throw Error(`Cannot read ${configFile}: ${
 const color=stdout.isTTY&&!process.env.NO_COLOR&&!flags.json;
 const safeText=value=>String(value).replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g,'');
 const paint=(code,value)=>color?`\x1b[${code}m${safeText(value)}\x1b[0m`:safeText(value);
-const lime=value=>paint('38;5;191',value);
+const burgundy=value=>paint('38;2;140;47;74',value);
+const royalRed=value=>paint('38;2;200;50;77',value);
+const gold=value=>paint('38;2;212;175;55',value);
+const royalBold=value=>paint('1;38;2;200;50;77',value);
 const neutral=value=>paint('38;5;250',value);
 const green=value=>paint('38;5;114',value);
 const blue=value=>paint('38;5;75',value);
 const purple=value=>paint('38;5;141',value);
-const orange=value=>paint('38;5;214',value);
-const gold=orange;
-const violet=purple;
-const red=value=>paint('38;5;203',value);
+const orange=value=>paint('38;2;230;164;49',value);
+const red=value=>paint('38;2;232;76;91',value);
 const dim=value=>paint('2',value);
 const bold=value=>paint('1',value);
 const fmt=value=>new Intl.NumberFormat('en-US').format(Number(value)||0);
@@ -67,7 +68,7 @@ const tier=value=>rarities[value]||rarities[legacyRarities[value]]||{label:Strin
 const ratio=(value,total)=>total>0?Math.max(0,Math.min(1,value/total)):0;
 const meter=(value,total,width=18)=>{
  const full=Math.round(ratio(value,total)*width);
- return lime('━'.repeat(full))+dim('─'.repeat(width-full));
+ return royalRed('━'.repeat(full))+burgundy('─'.repeat(width-full));
 };
 const label=(name,value)=>`  ${dim(String(name).toUpperCase().padEnd(11))}${value}\n`;
 const projectName=()=>path.basename(process.cwd())||'/';
@@ -110,10 +111,14 @@ const json=async(endpoint,options)=>await(await api(endpoint,options)).json();
 const sleep=milliseconds=>new Promise(resolve=>setTimeout(resolve,milliseconds));
 
 function brand(mode){
- const badge=mode?`  ${dim('[')}${mode==='demo'?gold('DEMO'):lime('LIVE')}${dim(']')}`:'';
- stdout.write(`\n  ${lime('◈')}  ${bold('lootlm')}  ${dim('/ STOCHASTIC INFERENCE')}${badge}\n  ${dim('roll a brain. keep the work.')}\n\n`);
+ const width=42,title='◆ LOOTLM',rest='─'.repeat(width-3-title.length-1);
+ const detail=` STOCHASTIC INFERENCE${mode?` · ${mode.toUpperCase()}`:''}`.padEnd(width);
+ stdout.write(`\n  ${burgundy('╭── ')}${gold('◆')} ${royalBold('LOOTLM')}${burgundy(' '+rest+'╮')}\n`);
+ stdout.write(`  ${burgundy('│')}${mode==='demo'?gold(detail):royalRed(detail)}${burgundy('│')}\n`);
+ stdout.write(`  ${burgundy('╰'+'─'.repeat(width)+'╯')}\n`);
+ stdout.write(`  ${dim('roll a brain. keep the work.')}\n\n`);
 }
-function rule(){stdout.write('  '+dim('─'.repeat(Math.min(58,termWidth()-4)))+'\n');}
+function rule(){const width=Math.min(58,termWidth()-4);stdout.write('  '+burgundy('─'.repeat(Math.max(0,width-2)))+gold('◆')+burgundy('─')+'\n');}
 async function question(prompt,secret=false){
  if(!stdin.isTTY)throw Error('Interactive login needs a terminal. For automation, set LOOTLM_API_KEY or LOOTLM_ACCESS_CODE with --email.');
  if(!secret){
@@ -165,8 +170,8 @@ function renderStatus(info,pool,awards,{withBrand=true}={}){
  const wallet=walletFrom(info);
  if(wallet)stdout.write(label('balance',`${bold(moneyMinor(wallet.balanceMinor))} · ${rollCostMinor(info)===null?'debit unavailable':moneyMinor(rollCostMinor(info))+' per roll'}`));
  rule();
- if(active)stdout.write(`  ${lime('›')} ${bold('Type a prompt')} in ${lime('loot')}  ${dim('or')}  ${bold('loot chat "…"')}\n`);
- else stdout.write(`  ${lime('›')} ${bold('loot roll')}  ${dim(rollTerms(info,pool))}\n`);
+ if(active)stdout.write(`  ${gold('›')} ${bold('Type a prompt')} in ${royalBold('loot')}  ${dim('or')}  ${bold('loot chat "…"')}\n`);
+ else stdout.write(`  ${gold('›')} ${bold('loot roll')}  ${dim(rollTerms(info,pool))}\n`);
  stdout.write(`  ${dim('odds: loot odds  ·  models: loot inventory')}\n\n`);
 }
 async function animation(award){
@@ -182,15 +187,15 @@ async function animation(award){
    const cells=locks.map((locked,index)=>locked?meta.glyph:symbols[(frame+index*2)%symbols.length]);
    const progress=Math.min(24,Math.floor(frame/29*24));
    const phase=frame<16?'ROLLING':frame<26?'LOCKING':'SECURED';
-   const reel=`  ${lime('│')}     ${locks[0]?meta.paint(cells[0]):bold(cells[0])}     ${lime('│')}     ${locks[1]?meta.paint(cells[1]):bold(cells[1])}     ${lime('│')}     ${locks[2]?meta.paint(cells[2]):bold(cells[2])}     ${lime('│')}`;
+   const reel=`  ${burgundy('│')}     ${locks[0]?meta.paint(cells[0]):royalRed(cells[0])}     ${burgundy('│')}     ${locks[1]?meta.paint(cells[1]):royalRed(cells[1])}     ${burgundy('│')}     ${locks[2]?meta.paint(cells[2]):royalRed(cells[2])}     ${burgundy('│')}`;
    const lines=[
-    '  '+lime('╭─────────── LOOT ROLL ───────────╮'),
-    '  '+lime('│')+dim('       server result locked       ')+lime('│'),
-    '  '+lime('├───────────┬───────────┬───────────┤'),
+    '  '+burgundy('╭─────────── ')+gold('LOOT ROLL')+burgundy(' ───────────╮'),
+    '  '+burgundy('│')+dim('       server result locked       ')+burgundy('│'),
+    '  '+burgundy('├───────────┬───────────┬───────────┤'),
     reel,
-    '  '+lime('├───────────┴───────────┴───────────┤'),
-    `  ${lime('│')}  ${lime('━'.repeat(progress))}${dim('─'.repeat(24-progress))}  ${phase.padEnd(7)} ${lime('│')}`,
-    '  '+lime('╰───────────────────────────────────╯')
+    '  '+burgundy('├───────────┴───────────┴───────────┤'),
+    `  ${burgundy('│')}  ${royalRed('━'.repeat(progress))}${burgundy('─'.repeat(24-progress))}  ${gold(phase.padEnd(7))} ${burgundy('│')}`,
+    '  '+burgundy('╰───────────────────────────────────╯')
    ];
    if(rendered)stdout.write(`\x1b[${lines.length}A`);
    for(const line of lines)stdout.write('\x1b[2K'+line+'\n');
@@ -207,7 +212,7 @@ function renderResult(award,replayed=false,roll){
  stdout.write(label('roll id',dim(short(award.id))));
  if(Number.isSafeInteger(roll?.balanceAfterMinor))stdout.write(label('balance',`${moneyMinor(roll.balanceAfterMinor)} remaining`));
  rule();
- stdout.write(`  ${lime('ACTIVE')} ${dim('Your next prompt routes here.')}\n  ${dim('Try')} ${bold('loot')} ${dim('or')} ${bold('loot chat "What should we build?"')}\n\n`);
+ stdout.write(`  ${gold('ACTIVE')} ${dim('Your next prompt routes here.')}\n  ${dim('Try')} ${royalBold('loot')} ${dim('or')} ${bold('loot chat "What should we build?"')}\n\n`);
 }
 async function confirmPaidRoll(info,pool,ask=question){
  const wallet=walletFrom(info),cost=rollCostMinor(info);
@@ -216,7 +221,7 @@ async function confirmPaidRoll(info,pool,ask=question){
  if(flags.yes)return true;
  if(flags.json)throw Error('Paid JSON rolls require --yes.');
  if(!stdin.isTTY)throw Error('Paid noninteractive rolls require --yes.');
- stdout.write(`\n  ${bold('ROLL CONFIRMATION')}\n`);
+ stdout.write(`\n  ${gold('ROLL CONFIRMATION')}\n`);
  stdout.write(label('debit',moneyMinor(cost)));
  stdout.write(label('balance',`${moneyMinor(wallet.balanceMinor)} → ${moneyMinor(wallet.balanceMinor-cost)}`));
  stdout.write(label('allocation',allocationCopy(pool)));
@@ -245,12 +250,12 @@ function renderWallet(info,{withBrand=true}={}){
   stdout.write(`  ${gold('WALLET NOT CONNECTED')}\n  ${dim('This internal build cannot accept or simulate funds.')}\n  ${dim('Jonas must land the wallet + webhook contract before paid testing.')}\n\n`);
   return;
  }
- stdout.write(`  ${bold('INFERENCE WALLET')}\n\n`);
+ stdout.write(`  ${gold('INFERENCE WALLET')}\n\n`);
  stdout.write(label('balance',bold(moneyMinor(wallet.balanceMinor))));
  stdout.write(label('roll debit',rollCostMinor(info)===null?'—':moneyMinor(rollCostMinor(info))));
  stdout.write(label('reload',Number.isSafeInteger(wallet.topupMinor)?moneyMinor(wallet.topupMinor):'$10.00'));
  rule();
- stdout.write(`  ${lime('›')} ${bold('loot topup')} ${dim('secure checkout, then return here')}\n\n`);
+ stdout.write(`  ${gold('›')} ${bold('loot topup')} ${dim('secure checkout, then return here')}\n\n`);
 }
 async function openCheckout(url){
  const parsed=new URL(url);if(parsed.protocol!=='https:')throw Error('Checkout URL must use HTTPS.');
@@ -265,7 +270,7 @@ async function topup(){
  const checkout=await json('/internal/checkouts',{body:{amountMinor:wallet.topupMinor??1000},headers:{'Idempotency-Key':randomUUID()}});
  if(flags.json){stdout.write(JSON.stringify(checkout)+'\n');return;}
  brand(info.provider);
- stdout.write(`  ${bold('SECURE TOP-UP')}  ${moneyMinor(checkout.amountMinor??wallet.topupMinor??1000)}\n  ${dim('Card entry happens on the payment provider, never in LootLM.')}\n\n`);
+ stdout.write(`  ${gold('SECURE TOP-UP')}  ${moneyMinor(checkout.amountMinor??wallet.topupMinor??1000)}\n  ${dim('Card entry happens on the payment provider, never in LootLM.')}\n\n`);
  if(!flags['no-open'])await openCheckout(checkout.url);
  stdout.write(`  ${dim('Checkout:')} ${checkout.url}\n\n`);
  const glyphs=['◐','◓','◑','◒'];
@@ -273,11 +278,11 @@ async function topup(){
   const state=await json(`/internal/checkouts/${encodeURIComponent(checkout.id)}`);
   if(['paid','credited','complete'].includes(state.status)){
    if(stdout.isTTY)stdout.write('\r\x1b[2K');
-   stdout.write(`  ${lime('✓ FUNDED')} ${moneyMinor(state.creditedMinor??checkout.amountMinor??wallet.topupMinor??1000)} added.\n\n`);
+   stdout.write(`  ${gold('✓ FUNDED')} ${moneyMinor(state.creditedMinor??checkout.amountMinor??wallet.topupMinor??1000)} added.\n\n`);
    renderWallet(await json('/internal/me'),{withBrand:false});return;
   }
   if(['expired','failed','canceled'].includes(state.status))throw Error(`Checkout ${state.status}. No balance was added.`);
-  if(stdout.isTTY)stdout.write(`\r\x1b[2K  ${lime(glyphs[attempt%glyphs.length])} Waiting for verified payment…`);
+  if(stdout.isTTY)stdout.write(`\r\x1b[2K  ${royalRed(glyphs[attempt%glyphs.length])} Waiting for verified payment…`);
   await sleep(1500);
  }
  if(stdout.isTTY)stdout.write('\r\x1b[2K');
@@ -296,13 +301,13 @@ function renderInventory(awards,{withBrand=true}={}){
 }
 function renderOdds(pool,{withBrand=true}={}){
  if(withBrand)brand();
- stdout.write(`  ${bold('THE CURRENT POOL')}  ${dim('published odds')}\n\n`);
+ stdout.write(`  ${gold('THE CURRENT POOL')}  ${dim('published odds')}\n\n`);
  for(const entry of pool.entries){
   const meta=tier(entry.tier),percent=entry.probability*100,filled=Math.round(percent/5);
   stdout.write(`  ${String(percent.toFixed(percent%1?1:0)+'%').padStart(5)}  ${meta.paint('━'.repeat(filled))}${dim('─'.repeat(20-filled))}  ${meta.paint(meta.glyph)} ${entry.name} ${dim('· '+meta.label)}\n`);
  }
  stdout.write(`\n  ${dim('RARITY LADDER')}\n  ${rarities.common.paint('◆ COMMON')}  ${rarities.uncommon.paint('⬟ UNCOMMON')}  ${rarities.rare.paint('✦ RARE')}\n  ${rarities.epic.paint('✧ EPIC')}    ${rarities.legendary.paint('✹ LEGENDARY')}\n`);
- stdout.write(`\n  ${lime('EVERY ROLL')} ${allocationCopy(pool)}\n  ${dim('Independent server-side draw · animation is cosmetic · odds are snapshotted')}\n  ${dim('pool '+short(pool.version))}\n\n`);
+ stdout.write(`\n  ${gold('EVERY ROLL')} ${allocationCopy(pool)}\n  ${dim('Independent server-side draw · animation is cosmetic · odds are snapshotted')}\n  ${dim('pool '+short(pool.version))}\n\n`);
 }
 function renderUsage(data){
  const rows=[['REQUEST','STATE','INPUT','OUTPUT','PROVIDER COST']];
@@ -327,7 +332,7 @@ async function streamChat({model,messages,maxTokens,showHeader=true}){
   headers:{'Idempotency-Key':randomUUID()}
  });
  let buffer='',usage=null,answer='';const decoder=new TextDecoder();
- if(showHeader)stdout.write(`\n  ${violet('◆ MODEL')}\n\n`);
+ if(showHeader)stdout.write(`\n  ${gold('◆ MODEL')}\n\n`);
  const consume=line=>{
   if(!line.startsWith('data:'))return;
   const value=line.slice(5).trim();if(!value||value==='[DONE]')return;
@@ -355,7 +360,7 @@ async function play(){
  const reader=createInterface({input:stdin,output:stdout,terminal:true});let messages=[];
  try{
   while(true){
-   let input;try{input=(await reader.question(`  ${lime('loot')} ${dim('›')} `)).trim();}catch{break;}
+   let input;try{input=(await reader.question(`  ${royalBold('loot')} ${gold('›')} `)).trim();}catch{break;}
    if(!input)continue;
    if(input.startsWith('/')){
     const [action,...rest]=input.slice(1).trim().split(/\s+/);const value=rest.join(' ');
@@ -379,9 +384,9 @@ async function play(){
     }
     if(action==='use'){
      const award=await resolveAward(value,awards);cfg.model=award.id;writeConfig();
-     stdout.write(`  ${lime('ACTIVE')} ${bold(award.choice.name)} ${dim('· session context kept')}\n\n`);continue;
+     stdout.write(`  ${gold('ACTIVE')} ${bold(award.choice.name)} ${dim('· session context kept')}\n\n`);continue;
     }
-    if(action==='new'){messages=[];stdout.write(`  ${lime('NEW SESSION')} ${dim('Conversation context cleared; model unchanged.')}\n\n`);continue;}
+    if(action==='new'){messages=[];stdout.write(`  ${gold('NEW SESSION')} ${dim('Conversation context cleared; model unchanged.')}\n\n`);continue;}
     if(action==='clear'){stdout.write('\x1bc');renderStatus(info,pool,awards);continue;}
     stdout.write(`  ${red('Unknown command')} ${dim('· try /help')}\n\n`);continue;
    }
@@ -398,7 +403,7 @@ async function play(){
 }
 function help(){
  brand();
- stdout.write(`${bold('  OPEN THE ARCADE')}\n  ${lime('loot')}                           Interactive prompt shell\n  ${lime('loot roll')}                      Roll and equip a model\n  ${lime('loot chat "prompt"')}             Send one prompt\n\n${bold('  YOUR LOADOUT')}\n  loot status                     Project, model, and allocation\n  loot inventory                  Models in your vault\n  loot use <number|award_id>       Equip a saved model\n  loot odds                       Exact published chances\n  loot usage                      Request and token ledger\n\n${bold('  WALLET')}\n  loot wallet                     Balance and roll debit\n  loot topup                      Fixed secure reload\n\n${bold('  ACCOUNT + INTEGRATION')}\n  loot login [--url URL] [--email EMAIL]\n  loot keys list|create|revoke\n  loot config                     Safe local configuration\n  loot logout\n  loot serve                      Start the private API server\n\n  ${dim('--json for automation · --no-animation · NO_COLOR=1')}\n  ${dim('The lootlm command remains a compatibility alias.')}\n  ${dim('Internal test build. No payment is collected in demo mode.')}\n\n`);
+ stdout.write(`${gold('  OPEN THE ARCADE')}\n  ${royalBold('loot')}                           Interactive prompt shell\n  ${gold('loot roll')}                      Roll and equip a model\n  ${gold('loot chat "prompt"')}             Send one prompt\n\n${gold('  YOUR LOADOUT')}\n  loot status                     Project, model, and allocation\n  loot inventory                  Models in your vault\n  loot use <number|award_id>       Equip a saved model\n  loot odds                       Exact published chances\n  loot usage                      Request and token ledger\n\n${gold('  WALLET')}\n  loot wallet                     Balance and roll debit\n  loot topup                      Fixed secure reload\n\n${gold('  ACCOUNT + INTEGRATION')}\n  loot login [--url URL] [--email EMAIL]\n  loot keys list|create|revoke\n  loot config                     Safe local configuration\n  loot logout\n  loot serve                      Start the private API server\n\n  ${dim('--json for automation · --no-animation · NO_COLOR=1')}\n  ${dim('The lootlm command remains a compatibility alias.')}\n  ${dim('Internal test build. No payment is collected in demo mode.')}\n\n`);
 }
 function showError(error){
  const hints={
@@ -432,7 +437,7 @@ async function main(){
   const data=await json('/auth/login',{body:{email,code,cli:true}});
   cfg={url,key:data.key,email:data.user.email};writeConfig();
   if(flags.json)stdout.write(JSON.stringify({ok:true,email,url})+'\n');
-  else{brand();stdout.write(`  ${lime('SIGNED IN')} ${bold(email)}\n  ${dim('Credentials saved with owner-only permissions.')}\n\n  ${bold('1')}  ${lime('loot roll')}  ${dim('get a model')}\n  ${bold('2')}  ${lime('loot')}       ${dim('open the prompt shell')}\n\n`);}
+  else{brand();stdout.write(`  ${gold('SIGNED IN')} ${bold(email)}\n  ${dim('Credentials saved with owner-only permissions.')}\n\n  ${bold('1')}  ${gold('loot roll')}  ${dim('get a model')}\n  ${bold('2')}  ${royalBold('loot')}       ${dim('open the prompt shell')}\n\n`);}
   return;
  }
  if(cmd==='logout'){
@@ -460,7 +465,7 @@ async function main(){
  }
  if(cmd==='use'){
   const awards=(await json('/v1/allowances')).data;const award=await resolveAward(args[0],awards);
-  cfg.model=award.id;writeConfig();stdout.write(`\n  ${lime('ACTIVE')} ${bold(award.choice.name)}\n  ${dim(award.choice.model+' · '+short(award.id))}\n\n`);return;
+  cfg.model=award.id;writeConfig();stdout.write(`\n  ${gold('ACTIVE')} ${bold(award.choice.name)}\n  ${dim(award.choice.model+' · '+short(award.id))}\n\n`);return;
  }
  if(cmd==='odds'){
   const data=await json('/internal/pool');if(flags.json)stdout.write(JSON.stringify(data)+'\n');else renderOdds(data);return;
