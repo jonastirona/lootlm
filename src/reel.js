@@ -1,4 +1,4 @@
-const ranks={starter:1,common:2,specialist:3,epic:4,legendary:5,mythic:6,uncommon:2,rare:3,bust:2,strong:4};
+const ranks={starter:1,bust:1,common:2,specialist:3,rare:3,epic:4,legendary:5,mythic:6,uncommon:2,strong:4};
 const multipliers=[0,1,1,1.25,2,3,5];
 
 export const showcaseWeight=entry=>multipliers[ranks[entry?.tier]||1];

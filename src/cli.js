@@ -63,22 +63,24 @@ const moneyMinor=value=>`$${(Number(value)/100).toFixed(2)}`;
 const short=value=>String(value||'').replace(/^[^_]+_/,'').slice(-8);
 const termWidth=()=>Math.max(44,Math.min(stdout.columns||88,100));
 const rarities={
- starter:{key:'starter',rank:1,label:'STARTER',glyph:'◇',paint:neutral},
+ bust:{key:'bust',rank:1,label:'BUST',glyph:'◇',paint:neutral},
+ starter:{key:'bust',rank:1,label:'BUST',glyph:'◇',paint:neutral},
  common:{key:'common',rank:2,label:'COMMON',glyph:'◆',paint:green},
- specialist:{key:'specialist',rank:3,label:'SPECIALIST',glyph:'⬟',paint:blue},
+ rare:{key:'rare',rank:3,label:'RARE',glyph:'⬟',paint:blue},
+ specialist:{key:'rare',rank:3,label:'RARE',glyph:'⬟',paint:blue},
  epic:{key:'epic',rank:4,label:'EPIC',glyph:'✦',paint:purple},
  legendary:{key:'legendary',rank:5,label:'LEGENDARY',glyph:'✹',paint:orange},
  mythic:{key:'mythic',rank:6,label:'MYTHIC',glyph:'✺',paint:gold},
- uncommon:{key:'uncommon',rank:2,label:'UNCOMMON',glyph:'⬟',paint:green},
- rare:{key:'rare',rank:3,label:'RARE',glyph:'✦',paint:blue}
+ uncommon:{key:'uncommon',rank:2,label:'UNCOMMON',glyph:'⬟',paint:green}
 };
 // Temporary compatibility for Jonas's four-tier prototype pool.
-const legacyRarities={bust:'common',strong:'epic'};
+const legacyRarities={strong:'epic'};
 const tier=value=>rarities[value]||rarities[legacyRarities[value]]||{key:'unknown',rank:0,label:String(value||'MODEL').toUpperCase(),glyph:'◆',paint:neutral};
 const modelSigils={
  'meta-llama/llama-3.2-1b-instruct':'L1','meta-llama/llama-3.2-3b-instruct':'L3','mistralai/ministral-3b-2512':'M3','qwen/qwen3-8b':'Q8',
  'qwen/qwen3-coder-30b-a3b-instruct':'QC','openai/gpt-oss-20b':'O2','openai/gpt-oss-120b':'O1','deepseek/deepseek-v4.1-flash':'D4','qwen/qwen3.8-flash':'QF','mistralai/mistral-small-2603':'MS',
  'qwen/qwen3-coder':'QX','mistralai/devstral-2512':'DV','mistralai/codestral-2508':'CS','google/gemma-4-31b-it':'G4','moonshotai/kimi-k2.7-code':'K2','minimax/minimax-m3':'MM',
+ 'meta-llama/llama-4-maverick':'LM','mistralai/mistral-medium-3-5':'M5','deepseek/deepseek-v4-pro-0813':'DP','qwen/qwen3.5-plus-20260420':'QP',
  'z-ai/glm-5.3':'G5','moonshotai/kimi-k3':'K3','google/gemini-3.8-flash':'GF','openai/gpt-6-sol':'S6','anthropic/claude-sonnet-5':'C5','x-ai/grok-4.7':'X7','anthropic/claude-opus-5.5':'O5','openai/gpt-6-astra':'A6'
 };
 const modelLabel=value=>{
@@ -165,12 +167,17 @@ async function writeModelHeadline(choice,meta,{animate=false,indent='  '}={}){
  }finally{process.removeListener('SIGINT',interrupt);restore();}
 }
 
+const decorativeStrip=(width,frame=0)=>Array.from({length:Math.max(0,width)},(_,index)=>{
+ const phase=(index+frame)%12,char=phase===0?'*':phase===4?'+':phase===8?'o':'.',painter=phase<4?hotPink:phase<8?cyan:gold;
+ return painter(char);
+}).join('');
+const centeredAnsi=(value,width)=>{const space=Math.max(0,width-visibleLength(value));return ' '.repeat(Math.floor(space/2))+value+' '.repeat(Math.ceil(space/2));};
 function brand(mode){
  const width=Math.min(64,termWidth()-4),inner=width-2;
  const title='✦ L O O T L M ✦',subtitle=`MODEL CASINO${mode?' // '+String(mode).toUpperCase():''}`;
  const pad=text=>' '.repeat(Math.max(0,Math.floor((inner-text.length)/2)))+text+' '.repeat(Math.max(0,Math.ceil((inner-text.length)/2)));
- stdout.write(`\n  ${hotPink('●')} ${cyan('✦')} ${gold('●')} ${royalRed('✦')} ${hotPink('●')} ${cyan('✦')} ${gold('●')}\n`);
- stdout.write(`  ${gold('╔'+'═'.repeat(inner)+'╗')}\n  ${gold('║')}${royalBold(pad(title))}${gold('║')}\n  ${gold('║')}${cyan(pad(subtitle))}${gold('║')}\n  ${gold('╚'+'═'.repeat(inner)+'╝')}\n\n`);
+ stdout.write(`\n${centerAnsi(decorativeStrip(width,Date.now()%12),termWidth())}\n`);
+ stdout.write(`  ${gold('╔'+'═'.repeat(inner)+'╗')}\n  ${gold('║')}${royalBold(pad(title))}${gold('║')}\n  ${gold('║')}${cyan(pad(subtitle))}${gold('║')}\n  ${gold('╚'+'═'.repeat(inner)+'╝')}\n${centerAnsi(decorativeStrip(width,(Date.now()+5)%12),termWidth())}\n\n`);
 }
 function rule(){const width=Math.min(58,termWidth()-4);stdout.write('  '+burgundy('─'.repeat(Math.max(0,width-2)))+gold('◆')+burgundy('─')+'\n');}
 async function question(prompt,secret=false){
@@ -222,6 +229,24 @@ function slotCard(choice,width,{hot=false}={}){
  ];
  return lines.map(line=>hot?gold('▶')+meta.paint(line)+gold('◀'):meta.paint(' '+line+' '));
 }
+function homeFrame(info,pool,awards,frame=0){
+ const columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),width=Math.min(82,columns-4),inner=width-2,active=currentAward(awards),wallet=walletFrom(info),canvas=Array(rows).fill('');
+ const border='+'+'='.repeat(inner)+'+',title=frame%2?hotPink('L O O T L M  //  MODEL CASINO'):gold('L O O T L M  //  MODEL CASINO');
+ const lines=[decorativeStrip(width,frame),cyan(border),cyan('|')+centeredAnsi(title,inner)+cyan('|'),cyan('|')+bold(centeredPlain('PULL ONE MODEL  +  UNLOCK 1,000,000 TOKENS',inner))+cyan('|'),cyan(border),''];
+ if(active){
+  const meta=tier(active.choice.tier),card=slotCard(active.choice,Math.min(48,width-8),{hot:frame%4<2});
+  lines.push(meta.paint(meta.glyph+' ACTIVE PRIZE '+meta.glyph),...card,`${bold(compact(active.available??active.remaining))} TOKENS REMAINING`);
+ }else lines.push(gold(frame%2?'>>> PULL THE LEVER <<<':'*** INSERT ROLL ***'),bold('MYSTERY MODEL + 1,000,000 TOKENS'),dim(rollTerms(info,pool)));
+ if(wallet)lines.push(`${moneyMinor(wallet.balanceMinor)} BALANCE`);
+ lines.push('',hotPink('/roll')+'  '+cyan('/models')+'  '+gold('/collection')+'  '+dim('/help  /exit'),decorativeStrip(width,frame+6));
+ const top=Math.max(1,Math.floor((rows-lines.length-2)/2));
+ for(let index=0;index<lines.length&&top+index<rows-1;index++)canvas[top+index]=centerAnsi(lines[index],columns);
+ stdout.write('\x1b[H'+canvas.map(line=>'\x1b[2K'+line).join('\n')+`\x1b[${rows};1H`);
+}
+async function renderHome(info,pool,awards,{animate=true}={}){
+ const moving=animate&&color&&stdout.isTTY&&!flags['no-animation']&&process.env.LOOTLM_REDUCED_MOTION!=='1';
+ for(let frame=0;frame<(moving?14:1);frame++){homeFrame(info,pool,awards,frame);if(moving)await sleep(65);}
+}
 function renderStatus(info,pool,awards,{withBrand=true}={}){
  const active=currentAward(awards);
  if(active&&cfg.model!==active.id){cfg.model=active.id;writeConfig();}
@@ -239,7 +264,7 @@ function renderStatus(info,pool,awards,{withBrand=true}={}){
 }
 function machineFrame(candidates,index,{frame=0,progress=0,phase='WHEEL READY',final=false,winner=candidates[index],lever=0}={}){
  const columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),side=columns>=88,leverWidth=14,panel=Math.min(76,columns-(side?leverWidth+6:4));
- const center=text=>centerAnsi(text,columns),framePaint=[hotPink,cyan,gold][frame%3],edge='+'+'-'.repeat(panel-2)+'+';
+ const center=text=>centerAnsi(text,columns),framePaint=[hotPink,cyan,gold][frame%3],edge='+'+Array.from({length:panel-2},(_,i)=>(i+frame)%11===0?'*':'-').join('')+'+';
  const at=offset=>candidates[(index+offset+candidates.length*4)%candidates.length];
  const row=(choice,active=false)=>{const meta=tier(choice.tier),inner=panel-2,sigil=modelSigils[choice.model]||'AI',modelWidth=Math.max(8,inner-20),text=`${active?'> ':'  '}[${sigil}] ${fitPlain(modelLabel(choice.model),modelWidth)} ${meta.label.padStart(10)}${active?' <':'  '}`,line=`|${text}|`;return active?payline(line):meta.paint(line);};
  const title=final?(tier(winner.tier).rank===6?'MYTHIC JACKPOT':'MODEL LOCKED'):'LOOTLM MODEL DRAW';
@@ -319,6 +344,23 @@ async function animation(award,entries){
   await sleep(winMeta.rank>=4?850:500);
  }finally{process.removeListener('SIGINT',interrupt);restore();}
 }
+function prizeFrame(award,frame){
+ const choice=award.choice,meta=tier(choice.tier),columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),width=Math.min(78,columns-4),inner=width-2,canvas=Array(rows).fill('');
+ const flash=[meta.paint,hotPink,gold,cyan][frame%4],burst=frame%2?'*** !!! *** !!! ***':'!!! *** !!! *** !!!';
+ const lines=[decorativeStrip(width,frame),flash('+'+'='.repeat(inner)+'+'),flash('|')+centeredAnsi(bold(burst),inner)+flash('|'),flash('|')+centeredAnsi(bold('P R I Z E   U N L O C K E D'),inner)+flash('|'),flash('|')+centeredAnsi(meta.paint(meta.glyph+' '+meta.label+' '+meta.glyph),inner)+flash('|'),''];
+ const card=slotCard(choice,Math.min(54,width-8),{hot:frame%4<2});
+ lines.push(...card,'',gold('1,000,000 TOKENS'),bold(modelLabel(choice.model)),'',dim('ADDED TO YOUR MODEL VAULT'),flash('+'+'='.repeat(inner)+'+'),decorativeStrip(width,frame+6));
+ const top=Math.max(0,Math.floor((rows-lines.length)/2));
+ for(let index=0;index<lines.length&&top+index<rows;index++)canvas[top+index]=centerAnsi(lines[index],columns);
+ stdout.write('\x1b[H'+canvas.map(line=>'\x1b[2K'+line).join('\n'));
+}
+async function prizeReveal(award){
+ if(flags.json||flags['no-animation']||!stdout.isTTY||process.env.LOOTLM_REDUCED_MOTION==='1')return;
+ if(!immersiveScreen){stdout.write('\x1b[?1049h');temporaryMachineScreen=true;}
+ stdout.write('\x1b[2J\x1b[H\x1b[?25l');
+ try{for(let frame=0;frame<30;frame++){prizeFrame(award,frame);await sleep(70);}await sleep(900);}
+ finally{if(immersiveScreen)stdout.write('\x1b[?25h\x1b[2J\x1b[H');else closeTemporaryMachineScreen();}
+}
 async function renderResult(award,replayed=false,roll){
  const meta=tier(award.choice.tier),available=award.available??award.remaining;
  stdout.write(`\n  ${meta.paint(meta.glyph+' '+meta.label)}${replayed?dim(' · recovered'):''}\n`);
@@ -356,6 +398,7 @@ async function performRoll({compactOutput=false,ask=question}={}){
   data=await json('/internal/spins',{body:{},headers:{'Idempotency-Key':rollId}});
   cfg.pendingRoll=null;cfg.model=data.award.id;writeConfig();
   await animation(data.award,pool.entries);
+  await prizeReveal(data.award);
  }catch(error){closeTemporaryMachineScreen();throw error;}
  if(flags.json)stdout.write(JSON.stringify(data)+'\n');else await renderResult(data.award,data.replayed,data.roll);
  return data.award;
@@ -490,8 +533,7 @@ async function play(){
  if(useScreen){immersiveScreen=true;stdout.write('\x1b[?1049h\x1b[2J\x1b[H');}
  try{
   [info,pool,allowances]=await Promise.all([json('/internal/me'),json('/internal/pool'),json('/v1/allowances')]);awards=allowances.data;
-  renderStatus(info,pool,awards);
-  stdout.write(`  ${hotPink('⚡')} ${bold('/roll')}  ${cyan('/models')}  ${gold('/collection')}  ${dim('/help  /exit · or type a prompt')}\n\n`);
+  await renderHome(info,pool,awards);
   reader=createInterface({input:stdin,output:stdout,terminal:true});
   while(true){
    let input;try{input=(await reader.question(`  ${royalBold('loot')} ${gold('›')} `)).trim();}catch{break;}
@@ -517,7 +559,7 @@ async function play(){
     if(action==='topup'){try{await topup();info=await json('/internal/me');}catch(error){showError(error);}continue;}
     if(action==='status'){
      [info,pool,allowances]=await Promise.all([json('/internal/me'),json('/internal/pool'),json('/v1/allowances')]);awards=allowances.data;
-     renderStatus(info,pool,awards,{withBrand:false});continue;
+     await renderHome(info,pool,awards);continue;
     }
     if(action==='use'){
      const award=await resolveAward(value,awards);cfg.model=award.id;writeConfig();
@@ -525,7 +567,7 @@ async function play(){
      stdout.write(`  ${gold('ACTIVE')} ${modelHeadline(award.choice,meta)} ${dim('· context kept')}\n\n`);continue;
     }
     if(action==='new'){messages=[];stdout.write(`  ${gold('NEW SESSION')} ${dim('Conversation context cleared; model unchanged.')}\n\n`);continue;}
-    if(action==='clear'){stdout.write('\x1b[2J\x1b[H');renderStatus(info,pool,awards);continue;}
+    if(action==='clear'){stdout.write('\x1b[2J\x1b[H');await renderHome(info,pool,awards);continue;}
     stdout.write(`  ${red('Unknown command')} ${dim('· try /help')}\n\n`);continue;
    }
    const award=currentAward(awards);
@@ -568,7 +610,7 @@ function showError(error){
 async function main(){
  if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args,{json:!!flags.json});return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.8.1\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.9.0\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});

@@ -10,7 +10,7 @@ LootLM is the token and model entitlement layer. The client supplies the agent l
 
 ## Generic agents and chatbots
 
-Use an OpenAI-compatible client with the LootLM server URL plus `/v1`, a LootLM API key, and an `award_...` model ID returned by `GET /v1/models`. The client remains responsible for executing tool calls. Text-only Starter awards are valid for chat but are not coding-agent-compatible.
+Use an OpenAI-compatible client with the LootLM server URL plus `/v1`, a LootLM API key, and an `award_...` model ID returned by `GET /v1/models`. The client remains responsible for executing tool calls. Text-only Bust awards are valid for chat but are not coding-agent-compatible.
 
 ## Claude Code
 

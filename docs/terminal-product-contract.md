@@ -27,7 +27,7 @@ Gold is an interaction and cabinet accent; it does not imply a Legendary result.
 
 The actual model is the headline. Every collection model has a stable two-character card sigil, provider label, model title, rarity frame, glyph, and color. User-facing views derive the title from the provider model identifier. Pool aliases may remain in snapshots for API compatibility, but names such as `Code Wizard`, `Daily Driver`, or `Mythic Mind` must not appear in the human CLI.
 
-An interactive session owns the terminal alternate screen from launch through exit. It uses the full terminal window, restores the user's shell screen afterward, and never requests operating-system fullscreen. A roll begins with a lever inside the model-wheel cabinet. In a mouse-aware terminal, the user presses its handle, drags downward, and releases; Space and Enter remain fallbacks. LootLM consumes the complete SGR press, motion, and release sequence before disabling mouse reporting. The lever follows the drag and springs upward while the same cabinet starts its fixed-width vertical wheel with five visible card positions because each draw awards one model. Structural alignment uses ASCII characters only; ambiguous-width rarity glyphs and nested card borders do not participate in the wheel geometry. The center row uses a high-contrast background and explicit inward markers. The header says that one pull awards one model and 1,000,000 tokens. Each animation uses a newly randomized showcase sequence. High-rarity cards receive increased visual weight and one rare card appears immediately before the landing, while the already persisted server award remains authoritative. The UI labels the sequence as a showcase and points to `/collection` for exact odds. The layout contracts for short terminal panels. Reduced-motion and noninteractive output skip the cabinet and render the result directly.
+An interactive session owns the terminal alternate screen from launch through exit. Its animated home cabinet fills the terminal with a moving marquee, the active card or roll invitation, navigation, and a prompt anchored to the bottom row. It restores the user's shell screen afterward and never requests operating-system fullscreen. A roll begins with a lever inside the model-wheel cabinet. In a mouse-aware terminal, the user presses its handle, drags downward, and releases; Space and Enter remain fallbacks. LootLM consumes the complete SGR press, motion, and release sequence before disabling mouse reporting. The lever follows the drag and springs upward while the same cabinet starts its fixed-width vertical wheel with five visible card positions because each draw awards one model. Structural alignment uses ASCII characters only; ambiguous-width rarity glyphs and nested card borders do not participate in the wheel geometry. The center row uses a high-contrast background and explicit inward markers. The header says that one pull awards one model and 1,000,000 tokens. Each animation uses a newly randomized showcase sequence. High-rarity cards receive increased visual weight and one rare card appears immediately before the landing, while the already persisted server award remains authoritative. The UI labels the sequence as a showcase and points to `/collection` for exact odds. Every persisted result, including Bust, receives a separate full-screen animated prize reveal before control returns to the shell. The layout contracts for short terminal panels. Reduced-motion and noninteractive output skip the cabinet and render the result directly.
 
 ## Core loop
 
@@ -53,9 +53,9 @@ Rarity is redundant by design: color, glyph, and uppercase label always appear t
 
 | Rarity | Terminal color | Glyph | Tier probability |
 | --- | --- | :---: | ---: |
-| Starter | Silver | ◇ | 30% |
+| Bust | Silver | ◇ | 30% |
 | Common | Emerald | ◆ | 35% |
-| Specialist | Electric blue | ⬟ | 20% |
+| Rare | Electric blue | ⬟ | 20% |
 | Epic | Purple | ✦ | 10% |
 | Legendary | Warm gold | ✹ | 4% |
 | Mythic | Prismatic | ✺ | 1% |

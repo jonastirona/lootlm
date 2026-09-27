@@ -20,7 +20,7 @@ This branch contains a working terminal UX over Jonas's original API:
 - Epic, Legendary, and Mythic models receive an animated light sweep during reveals and a static glint when motion is reduced.
 - The selected model, project, token allocation, published odds, vault, usage, and errors are legible in-terminal.
 - Conversation context follows the user across rolls while that shell remains open.
-- Starter, Common, Specialist, Epic, Legendary, and Mythic each have a distinct ANSI color, glyph, and text label.
+- Bust, Common, Rare, Epic, Legendary, and Mythic each have a distinct ANSI color, glyph, and text label.
 - Animations are cosmetic. The cryptographically random server result is persisted first and survives an interrupted reveal.
 - `--json`, `NO_COLOR=1`, reduced motion, and narrow/noninteractive terminals remain supported.
 
@@ -102,7 +102,7 @@ The planned `loot topup` command creates a fresh server-side Stripe Checkout Ses
 
 ## Target model pool
 
-Discovery 01 contains 24 distinct model IDs across Starter, Common, Specialist, Epic, Legendary, and Mythic. Tier probabilities are provisionally 30%, 35%, 20%, 10%, 4%, and 1%. Run `loot collection` for exact per-model odds and capability metadata, or see [the collection contract](docs/collection.md).
+Discovery 01 contains 24 distinct model IDs across Bust, Common, Rare, Epic, Legendary, and Mythic. Tier probabilities are provisionally 30%, 35%, 20%, 10%, 4%, and 1%. Run `loot collection` for exact per-model odds and capability metadata, or see [the collection contract](docs/collection.md).
 
 Provider availability and distribution policy must be verified before any paid pool is published. The checked-in live draft proves only that the IDs and advertised metadata appeared in the current catalog. It does not prove supplier permission, tested reliability, quality ordering, or viable economics.
 

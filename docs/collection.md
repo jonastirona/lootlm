@@ -6,14 +6,14 @@ The demo odds are deliberately marked provisional:
 
 | Tier | Models | Tier probability |
 | --- | ---: | ---: |
-| Starter | 4 | 30% |
+| Bust | 4 | 30% |
 | Common | 6 | 35% |
-| Specialist | 6 | 20% |
+| Rare | 6 | 20% |
 | Epic | 4 | 10% |
 | Legendary | 3 | 4% |
 | Mythic | 1 | 1% |
 
-The integer per-model weights are published in `loot collection`; slight differences inside Common, Specialist, and Legendary only distribute the tier total exactly. Adding or removing models must not change a tier's probability budget without publishing a new pool version.
+The integer per-model weights are published in `loot collection`; slight differences inside Common, Rare, and Legendary only distribute the tier total exactly. Adding or removing models must not change a tier's probability budget without publishing a new pool version.
 
 `config/collection-demo.json` drives the no-cost demo. `config/collection-openrouter-draft.json` is a catalog-validated pricing snapshot for internal review. Catalog presence, context length, and advertised parameters do not establish supplier authorization, live reliability, or a quality ranking. Suggested uses are hypotheses until model-specific evaluations pass.
 
