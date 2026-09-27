@@ -6,7 +6,7 @@ This is an internal terminal-only build. Demo mode charges no money and labels i
 2. Install the local command with `npm link`.
 3. Run `loot login --url http://localhost:3131`. Use the invited email and the access code stored by the server at `.lootlm/access-code`.
 4. Run `loot collection`. Confirm that all six tier treatments, tier totals, exact model probabilities, and 24 distinct card sigils appear on one screen.
-5. Run `loot roll`. Pull the lever with Space, Enter, or a mouse click. Confirm that five positions of the model-card wheel move together, slow through a complete collection cycle, and stop on the awarded model at the center payline. The server draw occurs after the lever pull and is saved before wheel animation; skipping or interrupting the reveal cannot reroll it.
+5. Run `loot roll`. Grab the on-screen lever handle with the mouse, drag it down, and release it; Space or Enter is the fallback. Confirm that the lever follows the drag and springs back inside the same cabinet while five positions of the model-card wheel move together, slow through a complete collection cycle, and stop on the awarded model at the center payline. The server draw occurs after the lever pull and is saved before wheel animation; skipping or interrupting the reveal cannot reroll it.
 6. Run `loot`. Type a prompt, then use `/roll` and send a follow-up. The second model receives the current shell's conversation context.
 7. Use `/models`, `/status`, `/new`, and `/exit` to exercise the rest of the loop.
 

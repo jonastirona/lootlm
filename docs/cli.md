@@ -2,7 +2,7 @@
 
 LootLM has one user surface: the terminal. The short command is `loot`; `lootlm` is retained as a compatibility alias.
 
-Install the downloaded package with `npm install -g ./lootlm-0.7.1.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
+Install the downloaded package with `npm install -g ./lootlm-0.8.0.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
 
 ## First run
 
@@ -48,7 +48,7 @@ The latest roll becomes active. `loot use` accepts the displayed inventory numbe
 
 `loot collection` is the single collection and probability surface. It shows all 24 model cards, tier totals, exact per-model odds, owned status, and catalog-advertised tool/context metadata. The redundant odds command and standalone rarity preview were removed; probabilities and rarity treatments now appear on the model cards and in the reel itself.
 
-An animated roll uses one fixed-width vertical model wheel with five card positions visible at once. Every row follows the same ASCII geometry: stable model sigil and name on the left, rarity on the right, and one high-contrast center payline. The header states the outcome directly: one pull awards one model and 1,000,000 tokens. Color and motion add spectacle without participating in alignment. The player pulls a rendered lever with Space, Enter, or a terminal mouse click, then the entire strip moves through the window and decelerates onto the persisted award. The longer slowdown traverses a complete model cycle, so rare cards visibly pass the payline without changing the draw. The layout contracts for short terminal panels instead of skipping animation. `--no-animation`, `LOOTLM_REDUCED_MOTION=1`, and noninteractive output render the result directly.
+An animated roll uses one fixed-width vertical model wheel with five card positions visible at once. Every row follows the same ASCII geometry: stable model sigil and name on the left, rarity on the right, and one high-contrast center payline. The header states the outcome directly: one pull awards one model and 1,000,000 tokens. Color and motion add spectacle without participating in alignment. In a mouse-aware terminal, press the lever handle, drag it down at least four rows, and release it. Space and Enter remain keyboard fallbacks. The lever stays in the same cabinet, follows the pointer, then springs upward while the strip accelerates and decelerates onto the persisted award. The complete press, motion, and release sequence is consumed before mouse reporting is disabled so terminal escape bytes cannot leak into the prompt. The longer slowdown traverses a complete model cycle, so rare cards visibly pass the payline without changing the draw. The layout contracts for short terminal panels instead of skipping animation. `--no-animation`, `LOOTLM_REDUCED_MOTION=1`, and noninteractive output render the result directly.
 
 Interactive `loot` and `lootlm` sessions enter the terminal alternate screen at launch and restore the original shell screen on exit. This gives the interface the entire terminal window, isolates it from shell scrollback, and lets animation redraw from a stable origin. It does not request operating-system fullscreen. One-shot commands such as `loot collection` retain ordinary terminal output.
 

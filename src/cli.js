@@ -6,7 +6,7 @@ import {createInterface} from 'node:readline/promises';
 import {stdin,stdout,stderr} from 'node:process';
 import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import {centerAnsi} from './terminal-layout.js';
+import {centerAnsi,extractSgrMouseEvents,visibleLength} from './terminal-layout.js';
 
 const raw=process.argv.slice(2);
 const flags={};
@@ -28,6 +28,7 @@ const configDir=process.env.LOOTLM_CONFIG_DIR||path.join(os.homedir(),'.config',
 const configFile=path.join(configDir,'config.json');
 let cfg={};
 let immersiveScreen=false;
+let temporaryMachineScreen=false;
 try{cfg=JSON.parse(fs.readFileSync(configFile,'utf8'));}
 catch(error){if(error.code!=='ENOENT')throw Error(`Cannot read ${configFile}: ${error.message}`);}
 
@@ -235,52 +236,83 @@ function renderStatus(info,pool,awards,{withBrand=true}={}){
  const wallet=walletFrom(info);if(wallet)stdout.write(`  ${moneyMinor(wallet.balanceMinor)} balance · ${rollCostMinor(info)===null?'debit unavailable':moneyMinor(rollCostMinor(info))+' / roll'}\n`);
  stdout.write('\n');
 }
-async function pullLever(reader){
+function machineFrame(candidates,index,{frame=0,progress=0,phase='WHEEL READY',final=false,winner=candidates[index],lever=0}={}){
+ const columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),side=columns>=88,leverWidth=14,panel=Math.min(76,columns-(side?leverWidth+6:4));
+ const center=text=>centerAnsi(text,columns),framePaint=[hotPink,cyan,gold][frame%3],edge='+'+'-'.repeat(panel-2)+'+';
+ const at=offset=>candidates[(index+offset+candidates.length*4)%candidates.length];
+ const row=(choice,active=false)=>{const meta=tier(choice.tier),inner=panel-2,sigil=modelSigils[choice.model]||'AI',modelWidth=Math.max(8,inner-20),text=`${active?'> ':'  '}[${sigil}] ${fitPlain(modelLabel(choice.model),modelWidth)} ${meta.label.padStart(10)}${active?' <':'  '}`,line=`|${text}|`;return active?payline(line):meta.paint(line);};
+ const title=final?(tier(winner.tier).rank===6?'MYTHIC JACKPOT':'MODEL LOCKED'):'LOOTLM MODEL DRAW';
+ const wheel=[framePaint(edge),framePaint('|')+royalBold(centeredPlain(title,panel-2))+framePaint('|'),framePaint('|')+bold(centeredPlain('ONE PULL = ONE MODEL + 1,000,000 TOKENS',panel-2))+framePaint('|'),framePaint(edge),row(at(-2)),row(at(-1)),row(at(0),true),row(at(1)),row(at(2)),framePaint(edge)];
+ const barWidth=Math.max(12,panel-28),filled=Math.round(progress*barWidth),percent=String(Math.round(progress*100)).padStart(3);
+ wheel.push(`${final?tier(winner.tier).paint('LOCKED'):royalRed(progress?'SPINNING':'READY')} [${royalRed('#'.repeat(filled))}${dim('-'.repeat(barWidth-filled))}] ${percent}%`);
+ wheel.push(final?tier(winner.tier).paint(`[${modelSigils[winner.model]||'AI'}] ${modelLabel(winner.model)} - 1,000,000 TOKENS READY`):dim(phase));
+ const leverTitle=final?'PRIZE':progress>0?(frame%2?'SPIN!':'* SPIN *'):(lever>0?'PULLING':'PULL V'),handlePaint=[hotPink,gold,cyan][frame%3];
+ const leverLines=['+------------+','|'+bold(centeredPlain(leverTitle,12))+'|'];
+ for(let rowIndex=0;rowIndex<6;rowIndex++){
+  let body='            ';
+  if(rowIndex===lever)body='     '+handlePaint('O')+'      ';
+  else if(rowIndex>lever)body='     '+gold('|')+'      ';
+  leverLines.push('|'+body+'|');
+ }
+ leverLines.push('|  '+gold('___|___')+'   |','+------------+');
+ const totalWidth=side?panel+2+leverWidth:panel,top=Math.max(0,Math.floor((rows-(wheel.length+(side?0:leverLines.length+1)))/2)),left=Math.max(0,Math.floor((columns-totalWidth)/2));
+ const lines=[];
+ for(let i=0;i<wheel.length;i++){
+  if(side){const leftLine=wheel[i]||'',right=leverLines[i]||' '.repeat(leverWidth);lines.push(leftLine+' '.repeat(Math.max(0,panel-visibleLength(leftLine)))+'  '+right);}
+  else lines.push(wheel[i]);
+ }
+ if(!side)lines.push('',...leverLines);
+ stdout.write('\x1b[H'+[...Array(top).fill(''),...lines].slice(0,rows).map(line=>'\x1b[2K'+center(line)).join('\n'));
+ return side
+  ?{leverX:left+panel+3,leverY:top+3+lever,leverWidth}
+  :{leverX:left+Math.floor((panel-leverWidth)/2)+1,leverY:top+wheel.length+4+lever,leverWidth};
+}
+function closeTemporaryMachineScreen(){
+ if(!temporaryMachineScreen)return;
+ stdout.write('\x1b[?1002l\x1b[?1006l\x1b[?25h\x1b[?1049l');temporaryMachineScreen=false;
+}
+async function pullLever(entries){
  if(flags.json||flags['no-animation']||!stdout.isTTY||process.env.LOOTLM_REDUCED_MOTION==='1')return;
- const wasRaw=stdin.isRaw;reader?.pause();stdin.setRawMode(true);stdin.resume();
- stdout.write(`\n  ${hotPink('╭───────────╮')}       ${gold('●')}\n  ${hotPink('│ PULL REEL │')}       ${gold('┃')}\n  ${hotPink('╰───────────╯')}       ${gold('┗━━━')}\n  ${cyan('PRESS SPACE / ENTER OR CLICK THE HANDLE')} `);
- stdout.write('\x1b[?1000h\x1b[?1006h');
+ if(!immersiveScreen){stdout.write('\x1b[?1049h');temporaryMachineScreen=true;}
+ stdout.write('\x1b[2J\x1b[H\x1b[?25l');
+ let position=0,geometry=machineFrame(entries,0,{lever:position,phase:'DRAG THE LEVER DOWN - OR PRESS SPACE / ENTER'}),keyboard=false,dragging=false,startY=0,maxPosition=0,buffer='';
+ const wasRaw=stdin.isRaw;stdin.setRawMode(true);stdin.resume();stdout.write('\x1b[?1002h\x1b[?1006h');
  try{
   await new Promise((resolve,reject)=>{
-   const read=chunk=>{const value=chunk.toString();if(value.includes('\u0003')){stdin.off('data',read);reject(Error('Canceled'));return;}if(/[ \r\n]/.test(value)||/\x1b\[<0;\d+;\d+[Mm]/.test(value)){stdin.off('data',read);resolve();}};
+   const redraw=()=>{geometry=machineFrame(entries,0,{lever:position,phase:dragging?'KEEP DRAGGING DOWN':'GRAB THE LEVER HANDLE - OR PRESS SPACE / ENTER'});};
+   const read=chunk=>{
+    buffer+=chunk.toString();if(buffer.includes('\u0003')){stdin.off('data',read);reject(Error('Canceled'));return;}
+    if(/[ \r\n]/.test(buffer.replace(/\x1b\[<\d+;\d+;\d+[Mm]/g,''))){keyboard=true;stdin.off('data',read);resolve();return;}
+    const parsed=extractSgrMouseEvents(buffer);
+    for(const {button,x,y,kind} of parsed.events){
+     if(kind==='M'&&button===0&&x>=geometry.leverX&&x<geometry.leverX+geometry.leverWidth&&Math.abs(y-geometry.leverY)<=1){dragging=true;startY=y;maxPosition=0;}
+     else if(kind==='M'&&button===32&&dragging){position=Math.max(0,Math.min(5,y-startY));maxPosition=Math.max(maxPosition,position);redraw();}
+     else if(kind==='m'&&dragging){dragging=false;if(maxPosition>=4){stdin.off('data',read);resolve();return;}position=0;redraw();}
+    }
+    buffer=parsed.remainder;if(buffer.length>64)buffer=buffer.slice(-64);
+   };
    stdin.on('data',read);
   });
- }finally{
-  stdout.write('\x1b[?1000l\x1b[?1006l');stdin.setRawMode(!!wasRaw);stdin.pause();reader?.resume();
- }
- const lever=['●  ┃','┃  ●','┃  ┃','┗━━●'];
- for(const state of lever){stdout.write(`\r\x1b[2K  ${hotPink('⚡')} ${gold(state)} ${royalBold('LEVER PULLED')}`);await sleep(85);}
- stdout.write('\r\x1b[2K');
+ }finally{stdout.write('\x1b[?1002l\x1b[?1006l');stdin.setRawMode(!!wasRaw);stdin.pause();}
+ if(keyboard)for(position=0;position<=5;position++){machineFrame(entries,0,{lever:position,phase:'LEVER PULL ENGAGED'});await sleep(75);}
+ machineFrame(entries,0,{lever:5,phase:'LEVER RELEASED - DRAWING MODEL'});await sleep(180);
 }
 async function animation(award,entries){
  if(flags.json||flags['no-animation']||!stdout.isTTY||process.env.LOOTLM_REDUCED_MOTION==='1')return;
  const candidates=entries.length?entries:[award.choice],winner=award.choice,winMeta=tier(winner.tier);
- const columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),panel=Math.min(76,columns-4),landing=candidates.findIndex(item=>item.model===winner.model);
- const center=text=>centerAnsi(text,columns);
- const framePaint=frame=>[hotPink,cyan,gold][frame%3];
- const row=(choice,active=false)=>{
-  const meta=tier(choice.tier),inner=panel-2,sigil=modelSigils[choice.model]||'AI',modelWidth=Math.max(8,inner-20);
-  const text=`${active?'> ':'  '}[${sigil}] ${fitPlain(modelLabel(choice.model),modelWidth)} ${meta.label.padStart(10)}${active?' <':'  '}`;
-  const line=`|${text}|`;return active?payline(line):meta.paint(line);
- };
+ const landing=candidates.findIndex(item=>item.model===winner.model);
  const fast=40,slow=34,positions=Array.from({length:fast},(_,i)=>(i*5)%candidates.length);
  for(let i=0;i<slow;i++)positions.push((landing-(slow-1)+i+candidates.length*4)%candidates.length);
  const draw=(frame,final=false)=>{
   const index=final?landing:positions[frame];
-  const at=offset=>candidates[(index+offset+candidates.length*4)%candidates.length];
-  const edge='+'+'-'.repeat(panel-2)+'+',paintFrame=framePaint(frame);
-  const title=final?(winMeta.rank===6?'MYTHIC JACKPOT':'MODEL LOCKED'):'LOOTLM MODEL DRAW';
-  const lines=[paintFrame(edge),paintFrame('|')+royalBold(centeredPlain(title,panel-2))+paintFrame('|'),paintFrame('|')+bold(centeredPlain('ONE PULL = ONE MODEL + 1,000,000 TOKENS',panel-2))+paintFrame('|'),paintFrame(edge),row(at(-2)),row(at(-1)),row(at(0),true),row(at(1)),row(at(2)),paintFrame(edge)];
-  const ratioDone=(final?positions.length:frame+1)/positions.length,barWidth=Math.max(12,panel-28),progress=Math.round(ratioDone*barWidth),percent=String(Math.round(ratioDone*100)).padStart(3);
-  lines.push(center(`${final?winMeta.paint('LOCKED'):royalRed('SPINNING')} [${royalRed('#'.repeat(progress))}${dim('-'.repeat(barWidth-progress))}] ${percent}%`));
-  lines.push(center(final?winMeta.paint(`[${modelSigils[winner.model]||'AI'}] ${modelLabel(winner.model)} - 1,000,000 TOKENS READY`):dim(frame<fast?'WHEEL AT FULL SPEED':'DECELERATING - CENTER ROW WINS')));
-  const top=Math.max(0,Math.floor((rows-lines.length)/2));
-  stdout.write('\x1b[H'+[...Array(top).fill(''),...lines].slice(0,rows).map(line=>'\x1b[2K'+(line.startsWith('\x1b')?center(line):line.includes('|')||line.startsWith('+')?center(line):line)).join('\n'));
+  const lever=final?0:Math.max(0,5-Math.floor(frame/2));
+  machineFrame(candidates,index,{frame,progress:(final?positions.length:frame+1)/positions.length,phase:frame<fast?'WHEEL AT FULL SPEED':'DECELERATING - CENTER ROW WINS',final,winner,lever});
  };
- const ownsScreen=!immersiveScreen;
- stdout.write((ownsScreen?'\x1b[?1049h':'')+'\x1b[2J\x1b[H\x1b[?25l');
- const restore=()=>stdout.write('\x1b[?25h'+(ownsScreen?'\x1b[?1049l':'\x1b[2J\x1b[H'));
- const interrupt=()=>{stdout.write('\x1b[?25h\x1b[?1049l');process.exit(130);};process.once('SIGINT',interrupt);
+ const enterScreen=!immersiveScreen&&!temporaryMachineScreen;
+ if(enterScreen){stdout.write('\x1b[?1049h');temporaryMachineScreen=true;}
+ stdout.write('\x1b[2J\x1b[H\x1b[?25l');
+ const restore=()=>immersiveScreen?stdout.write('\x1b[?25h\x1b[2J\x1b[H'):closeTemporaryMachineScreen();
+ const interrupt=()=>{closeTemporaryMachineScreen();stdout.write('\x1b[?25h');process.exit(130);};process.once('SIGINT',interrupt);
  try{
   for(let frame=0;frame<positions.length;frame++){draw(frame);await sleep(frame<fast?60:100+(frame-fast)*7);}
   for(let frame=0;frame<(winMeta.rank>=4?28:18);frame++){draw(frame,true);await sleep(90);}
@@ -310,18 +342,21 @@ async function confirmPaidRoll(info,pool,ask=question){
  if(!/^y(?:es)?$/i.test(answer)){stdout.write(`\n  ${dim('Roll canceled. Nothing was deducted.')}\n\n`);return false;}
  return true;
 }
-async function performRoll({compactOutput=false,ask=question,reader}={}){
+async function performRoll({compactOutput=false,ask=question}={}){
  const [info,pool]=await Promise.all([json('/internal/me'),json('/internal/pool')]);
  if(!flags.json&&!compactOutput){
   brand(info.provider);
   stdout.write(`  ${hotPink('⚡ PULL THE LEVER ⚡')}\n  ${bold(rollTerms(info,pool))}\n  ${dim('The server locks the award before the reel moves. /collection shows exact odds.')}\n\n`);
  }
  if(!await confirmPaidRoll(info,pool,ask))return null;
- await pullLever(reader);
- const rollId=cfg.pendingRoll||randomUUID();cfg.pendingRoll=rollId;writeConfig();
- const data=await json('/internal/spins',{body:{},headers:{'Idempotency-Key':rollId}});
- cfg.pendingRoll=null;cfg.model=data.award.id;writeConfig();
- await animation(data.award,pool.entries);
+ await pullLever(pool.entries);
+ let data;
+ try{
+  const rollId=cfg.pendingRoll||randomUUID();cfg.pendingRoll=rollId;writeConfig();
+  data=await json('/internal/spins',{body:{},headers:{'Idempotency-Key':rollId}});
+  cfg.pendingRoll=null;cfg.model=data.award.id;writeConfig();
+  await animation(data.award,pool.entries);
+ }catch(error){closeTemporaryMachineScreen();throw error;}
  if(flags.json)stdout.write(JSON.stringify(data)+'\n');else await renderResult(data.award,data.replayed,data.roll);
  return data.award;
 }
@@ -468,10 +503,13 @@ async function play(){
      stdout.write(`\n  ${hotPink('⚡ ARCADE CONTROLS ⚡')}\n\n  ${bold('/roll')}        pull the high-voltage model reel\n  ${bold('/models')}      open your model-card vault\n  ${bold('/collection')}  browse cards, capabilities, and exact odds\n  ${bold('/use N')}       slam card N onto the active payline\n  ${bold('/status')}      show the equipped card\n  ${bold('/new')}         clear in-memory conversation context\n  ${bold('/clear')}       redraw the cabinet\n  ${bold('/exit')}        cash out of this terminal session\n\n`);continue;
     }
     if(action==='roll'){
+     reader.close();reader=null;
      try{
-      const award=await performRoll({compactOutput:true,ask:prompt=>reader.question(prompt),reader});
+      const award=await performRoll({compactOutput:true,ask:question});
       if(award){allowances=await json('/v1/allowances');awards=allowances.data;}
-     }catch(error){showError(error);}continue;
+     }catch(error){showError(error);}
+     finally{reader=createInterface({input:stdin,output:stdout,terminal:true});}
+     continue;
     }
     if(action==='models'||action==='vault'){allowances=await json('/v1/allowances');awards=allowances.data;renderInventory(awards,{withBrand:false});continue;}
     if(action==='collection'){pool=await json('/internal/pool');allowances=await json('/v1/allowances');awards=allowances.data;renderCollection(pool,awards,{withBrand:false});continue;}
@@ -530,7 +568,7 @@ function showError(error){
 async function main(){
  if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args,{json:!!flags.json});return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.7.1\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.8.0\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});
