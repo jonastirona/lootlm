@@ -1,6 +1,6 @@
 {
   "name": "lootlm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Private model slots and inference gateway, with a terminal arcade.",
   "type": "module",
   "private": false,
@@ -12,9 +12,10 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "node --test test/*.test.js",
-    "check": "node --check src/server.js && node --check src/store.js && node --check src/providers.js && node --check src/model-policy.js && node --check src/cli.js",
+    "check": "node --check src/server.js && node --check src/store.js && node --check src/providers.js && node --check src/model-policy.js && node --check src/catalog.js && node --check src/migrations.js && node --check src/cli.js && node --check public/app.js && node --check scripts/smoke-live.js",
     "pack:check": "npm pack --dry-run",
-    "package": "npm pack --pack-destination .."
+    "package": "npm pack --pack-destination ..",
+    "smoke:live": "node scripts/smoke-live.js"
   },
   "engines": {
     "node": ">=24.2.0"
@@ -26,7 +27,9 @@
     "src",
     "docs",
     "README.md",
-    ".env.example"
+    ".env.example",
+    "scripts",
+    "config"
   ],
   "license": "UNLICENSED",
   "devDependencies": {

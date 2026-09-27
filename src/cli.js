@@ -14,7 +14,7 @@ for(let i=0;i<raw.length;i++){
  const x=raw[i];
  if(x.startsWith('--')){
   const [key,inline]=x.slice(2).split('=',2);
-  if(['url','email','model','max-tokens','name','id','file','input','output','cost','note'].includes(key)){
+  if(['url','email','model','max-tokens','name','id','file','input','output','cost','note','supplier'].includes(key)){
    flags[key]=inline??raw[++i];
    if(!flags[key]||flags[key].startsWith('--'))throw Error(`--${key} needs a value`);
   }else flags[key]=inline??true;
@@ -491,7 +491,7 @@ function showError(error){
 
 async function main(){
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.1.0\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.2.0\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});
@@ -541,6 +541,8 @@ async function main(){
  if(cmd==='usage'){
   const data=await json('/v1/usage');if(flags.json)stdout.write(JSON.stringify(data)+'\n');else{brand();renderUsage(data);}return;
  }
+ if(cmd==='request'){if(!args[0])throw Error('Use lootlm request req_ID');stdout.write(JSON.stringify(await json('/v1/requests/'+encodeURIComponent(args[0])),null,2)+'\n');return;}
+ if(cmd==='doctor'){stdout.write(JSON.stringify(await json('/internal/admin/openrouter'),null,2)+'\n');return;}
  if(cmd==='keys'){
   const sub=args[0]||'list';
   if(sub==='list'){
@@ -569,14 +571,13 @@ async function main(){
  }
  if(cmd==='admin'){
   const sub=args[0]||'status';let data;
-  if(sub==='status')data=await json('/internal/admin');
+  if(sub==='models')data=await json('/internal/admin/catalog');
+  else if(sub==='retry'){if(!flags.id)throw Error('Use --id req_ID');data=await json('/internal/admin/requests/'+encodeURIComponent(flags.id)+'/retry',{body:{}});}
+  else if(sub==='status')data=await json('/internal/admin');
   else if(sub==='pause'||sub==='resume')data=await json('/internal/admin',{method:'PATCH',body:{inferenceEnabled:sub==='resume',spinsEnabled:sub==='resume'}});
-  else if(sub==='pool'){
-   if(!flags.file)throw Error('Use --file pool.json');
-   const body=JSON.parse(fs.readFileSync(flags.file,'utf8'));
-   data=await json('/internal/admin/pool',{method:'PUT',body:{entries:Array.isArray(body)?body:body.entries}});
-  }else if(sub==='resolve')data=await json('/internal/admin/resolve',{body:{requestId:flags.id,input:Number(flags.input),output:Number(flags.output),cost:Number(flags.cost),note:flags.note}});
-  else throw Error('admin status|pause|resume|pool --file FILE|resolve --id ID --input N --output N --cost USD --note EVIDENCE');
+  else if(sub==='pool'){if(!flags.file)throw Error('Use --file pool.json');const body=JSON.parse(fs.readFileSync(flags.file,'utf8'));data=await json('/internal/admin/pool',{method:'PUT',body:{entries:Array.isArray(body)?body:body.entries,supplier:flags.supplier||body.supplier}});}
+  else if(sub==='resolve'){data=await json('/internal/admin/resolve',{body:{requestId:flags.id,input:Number(flags.input),output:Number(flags.output),cost:Number(flags.cost),note:flags.note}});}
+  else throw Error('admin status|models|retry --id ID|pause|resume|pool --file FILE|resolve --id ID --input N --output N --cost USD --note EVIDENCE');
   stdout.write(JSON.stringify(data,null,2)+'\n');return;
  }
  throw Error(`Unknown command: ${cmd}. Run loot help.`);

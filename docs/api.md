@@ -8,7 +8,7 @@ export LOOTLM_BASE_URL='http://localhost:3131/v1'
 curl "$LOOTLM_BASE_URL/models" -H "Authorization: Bearer $LOOTLM_API_KEY"
 ```
 
-Select an `award_...` ID from `/models`. IDs identify your exact model allowance and are not interchangeable between accounts.
+Select an `award_...` ID from `/models`. Only allowances matching the active server supplier are listed. IDs identify your exact model allowance and are not interchangeable between accounts.
 
 ## Python
 
@@ -62,6 +62,7 @@ This is an integration recipe for LiteLLM's OpenAI-compatible provider path, not
 
 - `GET /v1/models`: unexhausted allowances, with underlying model and balance metadata.
 - `GET /v1/allowances`: all allowances, remaining and reserved tokens, model snapshot and pool version.
+- `GET /v1/requests/:id`: owner-only request status, price snapshot, usage, cost and reconciliation state.
 - `GET /v1/usage`: latest 100 request records, including pending and failed requests.
 - `POST /v1/chat/completions`: text Chat Completions with optional SSE streaming.
 - `POST /internal/spins`: private test roll; requires `Idempotency-Key`.
@@ -70,7 +71,7 @@ This is an integration recipe for LiteLLM's OpenAI-compatible provider path, not
 
 Supported chat fields: `model`, `messages`, `stream`, `stream_options`, `max_tokens` or `max_completion_tokens`, `temperature`, `top_p`, `tools`, `tool_choice`, `parallel_tool_calls`, `stop`. Text content only. Tool calls are forwarded; the gateway never executes tools. Images, audio, files, Responses API, embeddings, structured-output parameters and other unlisted fields are rejected.
 
-Default maximum generated tokens: 1,024; request input cap: 24,000 UTF-8 bytes; two active/pending requests per user. Operator settings can change these. Conservative input reservations mean the usable per-request maximum can be below the remaining balance.
+Default maximum generated tokens: 1,024 (automatically lowered to fit remaining balance/context when omitted); request input cap: 24,000 UTF-8 bytes; two active/pending requests per user. Operator settings can change these. Conservative input reservations mean the usable per-request maximum can be below the remaining balance.
 
 ## Idempotency and accounting
 
@@ -78,7 +79,7 @@ Send a unique `Idempotency-Key` header for each logical request and reuse it for
 
 `X-LootLM-Request-Id` identifies the ledger entry. Successful responses preserve the award ID in `model` and expose the actual model as `lootlm_model`. Normalized usage counts `prompt_tokens + completion_tokens`; reasoning and cached-token subtotals are not added again.
 
-Interrupted or uncertain provider responses retain reservations. The worker checks upstream generation records. Unknown usage requires operator investigation, not automatic refund or blind retry. A completed request may still consume tokens if the client disconnected before receiving it.
+Interrupted or uncertain provider responses retain reservations. The worker checks upstream generation records. Jobs back off and escalate after eight unsuccessful attempts; a missing generation ID escalates immediately. Unknown usage requires operator investigation, not automatic refund or blind retry. A completed request may still consume tokens if the client disconnected before receiving it.
 
 Streaming errors after headers are sent arrive as SSE `error` objects. Inspect them even if the initial HTTP status was 200.
 
@@ -91,3 +92,18 @@ Errors use `{ "error": { "code": "...", "message": "..." } }`:
 - 429: concurrency, login, roll or daily budget limit.
 - 502: upstream failure or pending reconciliation.
 - 503: inference/spins paused or live provider disabled.
+
+## Live setup administration
+
+All these routes require the current administrator role:
+
+- `GET /internal/admin/openrouter`: sanitized credential/connectivity status; no paid inference.
+- `GET /internal/admin/catalog`: eligible current text models, capability and price ceilings.
+- `POST /internal/admin/pool/preview`: `{entries: [{id,name,tier,weight,model}]}` → reviewed entries with current prices. Does not publish.
+- `PUT /internal/admin/pool`: `{supplier: "openrouter", entries: [...]}` publishes a separate version; `demo` is also supported.
+- `GET /internal/pool?supplier=openrouter`: inspect a supplier pool without changing the active provider.
+- `POST /internal/admin/requests/:id/retry`: retry usage lookup only, never generation.
+
+`X-LootLM-Max-Output` reports the actual output cap used. Unsupported model parameters fail before upstream inference. Price changes above an award's ceiling require an explicit product/allowance decision; new pool versions do not modify existing awards.
+
+The accounting response distinguishes provider `input_tokens`/`output_tokens` from `debited_tokens`. An upstream reservation violation creates `overage_tokens`, pauses inference and is absorbed by the operator; it does not drive a user balance below zero.

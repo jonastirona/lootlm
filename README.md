@@ -147,4 +147,9 @@ The automated suite is local and uses a simulated provider, so it creates no mod
 - [Terminal product and Jonas backend contract](docs/terminal-product-contract.md)
 - [API integration](docs/api.md)
 - [Coding-agent onboarding](docs/agents.md)
+- [Live OpenRouter setup](docs/openrouter.md)
 - [Operator guide and limitations](docs/operations.md)
+
+## OpenRouter backend setup
+
+See [OpenRouter setup](docs/openrouter.md) for separate demo/live pools, price ceilings, `loot doctor`, request inspection and the capped live smoke test. Pending usage is reconciled with durable backoff; uncertain requests retain reservations.

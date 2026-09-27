@@ -2,6 +2,7 @@ import {Fault} from './store.js';
 const delay=(ms)=>new Promise(r=>setTimeout(r,ms));
 export function normalizeUsage(u,choice){
  if(!u||!Number.isSafeInteger(u.prompt_tokens)||u.prompt_tokens<0||!Number.isSafeInteger(u.completion_tokens)||u.completion_tokens<0||!Number.isFinite(u.cost)||u.cost<0)throw Error('Provider did not return reliable token usage');
+ if(u.total_tokens!==undefined&&u.total_tokens!==u.prompt_tokens+u.completion_tokens)throw Error('Inconsistent provider token totals');
  // Completion tokens already include reasoning. Cached input remains part of prompt_tokens.
  return {input:u.prompt_tokens,output:u.completion_tokens,cost:u.cost};
 }
@@ -25,35 +26,68 @@ export class DemoProvider {
  }
  async reconcile(){return null;}
 }
+
 export class OpenRouterProvider {
- constructor(key){this.key=key;}
+ constructor(key,{ttl=60000,fetcher=(...args)=>fetch(...args),now=()=>Date.now()}={}){this.key=key;this.ttl=ttl;this.fetch=fetcher;this.now=now;this.cached=null;this.inflight=null;}
  async catalog(){
-  const response=await fetch('https://openrouter.ai/api/v1/models',{signal:AbortSignal.timeout(20000)});
-  if(!response.ok)throw Error('Cannot fetch OpenRouter model catalog');return (await response.json()).data;
+  if(this.cached&&this.now()-this.cached.at<this.ttl)return this.cached.data;
+  if(this.inflight)return this.inflight;
+  this.inflight=(async()=>{
+   try{
+    const response=await this.fetch('https://openrouter.ai/api/v1/models',{signal:AbortSignal.timeout(15000)});
+    if(!response.ok)throw new Fault(503,'catalog_unavailable','OpenRouter model catalog unavailable. Try again shortly.');
+    const {data}=await response.json();if(!Array.isArray(data))throw Error('Invalid catalog');
+    this.cached={at:this.now(),data};return data;
+   }catch(e){if(e instanceof Fault)throw e;throw new Fault(503,'catalog_unavailable','Cannot reach a valid OpenRouter model catalog.');}
+  })();
+  try{return await this.inflight;}finally{this.inflight=null;}
  }
+ async connection(){
+  const at=new Date().toISOString();
+  if(!this.key)return {status:'key_missing',ready:false,checkedAt:at,message:'Set OPENROUTER_API_KEY in the local .env file and restart.'};
+  try{
+   const response=await this.fetch('https://openrouter.ai/api/v1/key',{headers:{Authorization:`Bearer ${this.key}`},signal:AbortSignal.timeout(15000)});
+   if(!response.ok)return {status:response.status===401||response.status===403?'key_rejected':'upstream_unavailable',ready:false,checkedAt:at,message:`OpenRouter key check returned HTTP ${response.status}.`};
+   const {data}=await response.json();if(!data||typeof data!=='object')throw Error('Invalid key metadata');
+   const remaining=typeof data.limit_remaining==='number'?data.limit_remaining:null;
+   const exhausted=data.limit!==null&&data.limit!==undefined&&remaining!==null&&remaining<=0;
+   const expired=data.expires_at&&Date.parse(data.expires_at)<=Date.now();
+   return {status:expired?'key_expired':exhausted?'key_limit_exhausted':'connected',ready:!expired&&!exhausted,checkedAt:at,
+    limit:typeof data.limit==='number'?data.limit:null,remaining,usage:typeof data.usage==='number'?data.usage:null,
+    message:expired?'Replace the expired key.':exhausted?'The key spending limit is exhausted.':'Key accepted. Actual requests still depend on account credit and model availability.'};
+  }catch{return {status:'upstream_unavailable',ready:false,checkedAt:at,message:'Could not verify OpenRouter connectivity. Check network access and retry.'};}
+ }
+ checkModel(data,choice){if(data.model&&data.model!==choice.model){const e=new Fault(502,'model_mismatch','Upstream returned a different model. Inference has been paused.');throw e;}}
  async generate(body,choice,{onChunk,onId}){
-  const payload={...body,model:choice.model,provider:{allow_fallbacks:false,require_parameters:true}};
-  delete payload.stream_options; // OpenRouter always includes final usage.
-  const response=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${this.key}`,'Content-Type':'application/json','X-Title':'LootLM Internal Testing'},body:JSON.stringify(payload),signal:AbortSignal.timeout(180000)});
-  if(!response.ok){const error=new Fault(response.status>=500?502:response.status,'upstream_rejected',`OpenRouter rejected the request (HTTP ${response.status}).`);error.safeToRelease=response.status>=400&&response.status<500;throw error;}
-  if(!onChunk){const data=await response.json();if(data.id)onId(data.id);if(data.error)throw Error('Provider returned an error');return {response:data,usage:normalizeUsage(data.usage,choice)};}
-  let buffer='',usage=null,pid=null;const decoder=new TextDecoder();
+  const payload={...body,model:choice.model,provider:{allow_fallbacks:false,require_parameters:true,sort:'price',max_price:{prompt:choice.inputPrice,completion:choice.outputPrice,request:0}}};
+  delete payload.stream_options;
+  const response=await this.fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${this.key}`,'Content-Type':'application/json','X-OpenRouter-Title':'LootLM Internal Testing'},body:JSON.stringify(payload),signal:AbortSignal.timeout(180000)});
+  if(!response.ok){
+   const messages={401:'OpenRouter rejected the server API key.',402:'OpenRouter account credit is exhausted.',403:'OpenRouter denied access to this model.',404:'No matching OpenRouter model endpoint is available.',429:'OpenRouter is rate limiting this request.'};
+   const error=new Fault(response.status>=500?502:response.status,'upstream_rejected',messages[response.status]||`OpenRouter rejected the request (HTTP ${response.status}).`);
+   error.safeToRelease=[400,401,402,403,404,405,413,415,422,429].includes(response.status);throw error;
+  }
+  if(!onChunk){const data=await response.json();if(data.id)onId(data.id);if(data.error)throw Error('Provider returned an error');this.checkModel(data,choice);return {response:data,usage:normalizeUsage(data.usage,choice)};}
+  let buffer='',usage=null,pid=null,done=false;const decoder=new TextDecoder();
   const consume=line=>{
-   if(!line.startsWith('data:'))return;const data=line.slice(5).trim();if(!data||data==='[DONE]')return;
-   const event=JSON.parse(data);if(event.error)throw Error('Provider stream returned an error');
+   if(!line.startsWith('data:'))return;const data=line.slice(5).trim();if(!data)return;if(data==='[DONE]'){done=true;return;}
+   const event=JSON.parse(data);
    if(event.id&&event.id!==pid){pid=event.id;onId(pid);}
-   if(event.usage)usage=normalizeUsage(event.usage,choice);
+   if(event.error)throw Error('Provider stream returned an error');this.checkModel(event,choice);
+   if(event.usage&&event.usage.prompt_tokens!==undefined)usage=normalizeUsage(event.usage,choice);
    onChunk(event);
   };
   for await(const bytes of response.body){buffer+=decoder.decode(bytes,{stream:true});let n;while((n=buffer.indexOf('\n'))>=0){consume(buffer.slice(0,n).trimEnd());buffer=buffer.slice(n+1);}}
   buffer+=decoder.decode();if(buffer.trim())consume(buffer.trim());
-  if(!usage)throw Error('Stream ended without reliable usage');return {response:null,usage};
+  if(!usage||!done)throw Error('Stream ended without reliable usage and completion marker');return {response:null,usage};
  }
  async reconcile(pid,choice){
   if(!pid)return null;
-  const response=await fetch(`https://openrouter.ai/api/v1/generation?id=${encodeURIComponent(pid)}`,{headers:{Authorization:`Bearer ${this.key}`},signal:AbortSignal.timeout(15000)});
+  const response=await this.fetch(`https://openrouter.ai/api/v1/generation?id=${encodeURIComponent(pid)}`,{headers:{Authorization:`Bearer ${this.key}`},signal:AbortSignal.timeout(15000)});
   if(!response.ok)return null;const {data}=await response.json();
-  if(!data||!Number.isSafeInteger(data.native_tokens_prompt)||!Number.isSafeInteger(data.native_tokens_completion)||typeof data.total_cost!=='number')return null;
+  if(!data||(!data.finish_reason&&!data.native_finish_reason&&data.cancelled!==true))return null;
+  this.checkModel(data,choice);
+  if(!Number.isSafeInteger(data.native_tokens_prompt)||!Number.isSafeInteger(data.native_tokens_completion)||!Number.isFinite(data.total_cost))return null;
   return {input:data.native_tokens_prompt,output:data.native_tokens_completion,cost:data.total_cost};
  }
 }

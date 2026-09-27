@@ -1,0 +1,41 @@
+{
+  "supplier": "openrouter",
+  "entries": [
+    {
+      "id": "common",
+      "name": "Daily Driver",
+      "tier": "common",
+      "model": "qwen/qwen3-8b",
+      "weight": 100,
+      "inputPrice": 0.117,
+      "outputPrice": 0.45499999999999996,
+      "capabilities": {
+        "id": "qwen/qwen3-8b",
+        "name": "Qwen: Qwen3 8B",
+        "inputPrice": 0.117,
+        "outputPrice": 0.45499999999999996,
+        "inputCeiling": 0.117,
+        "outputCeiling": 0.45499999999999996,
+        "contextLength": 131072,
+        "maxOutput": 8192,
+        "tokenizer": "Qwen3",
+        "parameters": [
+          "frequency_penalty",
+          "include_reasoning",
+          "max_tokens",
+          "presence_penalty",
+          "reasoning",
+          "response_format",
+          "seed",
+          "stop",
+          "temperature",
+          "tool_choice",
+          "tools",
+          "top_k",
+          "top_p"
+        ],
+        "catalogCheckedAt": "2026-09-27T04:18:37.226Z"
+      }
+    }
+  ]
+}
