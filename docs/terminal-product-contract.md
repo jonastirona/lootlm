@@ -23,6 +23,10 @@ The interface should feel like a restrained royal arcade, not a neon casino. Use
 
 Gold is an interaction and brand accent; it does not imply a Legendary result. Legendary uses its own warmer gold and always appears with its `✹` glyph and uppercase label. Outside a rarity result, do not use the Common, Uncommon, Rare, Epic, or Legendary colors decoratively. `NO_COLOR=1` must preserve the same hierarchy through glyphs, labels, weight, spacing, and borders.
 
+The actual model is the headline. User-facing terminal views derive that headline from the provider model identifier and keep the exact identifier immediately underneath when space allows. Pool aliases may remain in snapshots for API compatibility, but names such as `Code Wizard`, `Daily Driver`, or `Mythic Mind` must not appear in the human CLI.
+
+Epic and Legendary receive a short light sweep when revealed. Epic sweeps from deep purple to pale lavender; Legendary sweeps from warm gold to champagne. Do not blink, loop indefinitely, or animate the whole terminal. Reduced-motion mode and noninteractive output use a single static glint, and the rarity label and glyph continue carrying the meaning without color.
+
 ## Core loop
 
 ```text

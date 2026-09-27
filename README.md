@@ -12,6 +12,8 @@ This branch contains a working terminal UX over Jonas's original API:
 
 - `loot` opens an interactive prompt shell; `lootlm` remains a compatibility alias.
 - The interface uses burgundy framing, a royal-red wordmark and meters, and antique-gold actions for a restrained royal arcade identity.
+- The real model is always the headline; internal pool nicknames such as `Code Wizard` never appear in the human CLI.
+- Epic and Legendary models receive an animated light sweep during reveals and a static glint when motion is reduced.
 - The selected model, project, token allocation, published odds, vault, usage, and errors are legible in-terminal.
 - Conversation context follows the user across rolls while that shell remains open.
 - Common, Uncommon, Rare, Epic, and Legendary each have a distinct ANSI color, glyph, and text label. Legendary is reserved for each 2% pool entry. Mythic is not in the MVP.
@@ -50,8 +52,11 @@ $ loot
   ╰──────────────────────────────────────────╯
   roll a brain. keep the work.
 
+  ✧ EPIC MODEL
+  ✦ GPT-6 SOL ✦
+  openai/gpt-6-sol
+
   PROJECT    my-repo
-  LOADOUT    ✧ GPT-6 Sol  EPIC
   TOKENS     ━━━━━━━━━━━━━━━───  88k available
 
   loot › /odds
@@ -64,7 +69,8 @@ Inside the shell:
 - `/roll` rolls another model without clearing the open conversation.
 - `/models` lists saved model allocations; `/use N` equips one.
 - `/odds` shows exact server-published probabilities.
-- `/status` shows project, loadout, and remaining allocation.
+- `/preview` shows all five rarity treatments and the Epic/Legendary shimmer.
+- `/status` shows the model headline, project, and remaining allocation.
 - `/new` clears in-memory conversation context without changing models.
 - `/help` lists commands; `/exit` leaves the shell.
 
@@ -73,6 +79,7 @@ One-shot commands are also available:
 ```sh
 loot status
 loot odds
+loot preview
 loot inventory
 loot use 2
 loot chat "Give me an unusual app idea."

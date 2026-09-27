@@ -20,6 +20,7 @@ Running `loot` with no subcommand opens the interactive shell. A prompt uses the
 /models     inspect saved allocations
 /use 2      equip model 2
 /odds       inspect exact published probabilities
+/preview    preview every rarity treatment
 /status     show project, model, and allocation
 /new        clear open-session conversation context
 /clear      clear and redraw the terminal
@@ -32,6 +33,7 @@ Current open-session continuity is not durable project persistence. Closing the 
 
 ```sh
 loot status
+loot preview
 loot inventory
 loot use 2
 loot chat "Write a binary search" --max-tokens 256
@@ -44,6 +46,8 @@ loot logout
 ```
 
 The latest roll becomes active. `loot use` accepts the displayed inventory number, full award ID, or displayed short ID.
+
+`loot preview` renders Common, Uncommon, Rare, Epic, and Legendary side by side without login or a server. It also demonstrates the Epic and Legendary light sweep in a color terminal. `--no-animation`, `LOOTLM_REDUCED_MOTION=1`, and `NO_COLOR=1` preserve a static labeled treatment.
 
 ## Login and credentials
 

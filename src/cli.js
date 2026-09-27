@@ -56,15 +56,38 @@ const moneyMinor=value=>`$${(Number(value)/100).toFixed(2)}`;
 const short=value=>String(value||'').replace(/^[^_]+_/,'').slice(-8);
 const termWidth=()=>Math.max(44,Math.min(stdout.columns||88,100));
 const rarities={
- common:{label:'COMMON',glyph:'◆',paint:neutral},
- uncommon:{label:'UNCOMMON',glyph:'⬟',paint:green},
- rare:{label:'RARE',glyph:'✦',paint:blue},
- epic:{label:'EPIC',glyph:'✧',paint:purple},
- legendary:{label:'LEGENDARY',glyph:'✹',paint:orange}
+ common:{key:'common',rank:1,label:'COMMON',glyph:'◆',paint:neutral},
+ uncommon:{key:'uncommon',rank:2,label:'UNCOMMON',glyph:'⬟',paint:green},
+ rare:{key:'rare',rank:3,label:'RARE',glyph:'✦',paint:blue},
+ epic:{key:'epic',rank:4,label:'EPIC',glyph:'✧',paint:purple},
+ legendary:{key:'legendary',rank:5,label:'LEGENDARY',glyph:'✹',paint:orange}
 };
 // Temporary compatibility for Jonas's four-tier prototype pool.
 const legacyRarities={bust:'common',strong:'epic'};
-const tier=value=>rarities[value]||rarities[legacyRarities[value]]||{label:String(value||'MODEL').toUpperCase(),glyph:'◆',paint:neutral};
+const tier=value=>rarities[value]||rarities[legacyRarities[value]]||{key:'unknown',rank:0,label:String(value||'MODEL').toUpperCase(),glyph:'◆',paint:neutral};
+const modelLabel=value=>{
+ const source=String(value||'MODEL'),leaf=source.split('/').pop();
+ if(!source.includes('/')&&/\s/.test(source))return source.toUpperCase();
+ return leaf.replace(/[-_]+/g,' ').replace(/\b(gpt|glm)\s+(?=\d)/gi,'$1-').toUpperCase();
+};
+const shinePalettes={
+ epic:{base:'1;38;2;170;111;239',edge:'1;38;2;219;181;255',peak:'1;38;2;255;244;255'},
+ legendary:{base:'1;38;2;230;164;49',edge:'1;38;2;255;216;105',peak:'1;38;2;255;250;211'}
+};
+function shineText(value,meta,frame=Math.floor(String(value).length/2)){
+ const text=safeText(value),palette=shinePalettes[meta.key];
+ if(!palette||!color)return bold(text);
+ return [...text].map((char,index)=>{
+  if(char===' ')return char;
+  const distance=Math.abs(index-frame),code=distance===0?palette.peak:distance===1?palette.edge:palette.base;
+  return paint(code,char);
+ }).join('');
+}
+function modelHeadline(choice,meta,frame){
+ const text=modelLabel(choice.model);
+ if(meta.rank<4)return bold(text);
+ return `${meta.paint('✦')} ${shineText(text,meta,frame)} ${meta.paint('✦')}`;
+}
 const ratio=(value,total)=>total>0?Math.max(0,Math.min(1,value/total)):0;
 const meter=(value,total,width=18)=>{
  const full=Math.round(ratio(value,total)*width);
@@ -109,6 +132,21 @@ async function api(endpoint,{body,method,headers={}}={}){
 }
 const json=async(endpoint,options)=>await(await api(endpoint,options)).json();
 const sleep=milliseconds=>new Promise(resolve=>setTimeout(resolve,milliseconds));
+
+async function writeModelHeadline(choice,meta,{animate=false,indent='  '}={}){
+ const text=modelLabel(choice.model),canAnimate=animate&&meta.rank>=4&&color&&stdout.isTTY&&!flags['no-animation']&&process.env.LOOTLM_REDUCED_MOTION!=='1';
+ if(!canAnimate){stdout.write(`${indent}${modelHeadline(choice,meta)}\n`);return;}
+ const restore=()=>stdout.write('\x1b[?25h');
+ const interrupt=()=>{restore();process.exit(130);};
+ process.once('SIGINT',interrupt);stdout.write('\x1b[?25l');
+ try{
+  for(let frame=-2;frame<text.length+2;frame++){
+   stdout.write(`\r\x1b[2K${indent}${modelHeadline(choice,meta,frame)}`);
+   await sleep(32);
+  }
+  stdout.write(`\r\x1b[2K${indent}${modelHeadline(choice,meta)}\n`);
+ }finally{process.removeListener('SIGINT',interrupt);restore();}
+}
 
 function brand(mode){
  const width=42,title='◆ LOOTLM',rest='─'.repeat(width-3-title.length-1);
@@ -159,13 +197,17 @@ function renderStatus(info,pool,awards,{withBrand=true}={}){
  const active=currentAward(awards);
  if(active&&cfg.model!==active.id){cfg.model=active.id;writeConfig();}
  if(withBrand)brand(info.provider);
- stdout.write(label('project',bold(projectName())));
  if(active){
   const meta=tier(active.choice.tier);const available=active.available??active.remaining;
-  stdout.write(label('loadout',`${meta.paint(meta.glyph+' '+active.choice.name)}  ${dim(meta.label)}`));
-  stdout.write(label('',dim(active.choice.model)));
+  stdout.write(`  ${meta.paint(meta.glyph+' '+meta.label)} ${dim('MODEL')}\n`);
+  stdout.write(`  ${modelHeadline(active.choice,meta)}\n`);
+  stdout.write(`  ${dim(active.choice.model)}\n\n`);
+  stdout.write(label('project',bold(projectName())));
   stdout.write(label('tokens',`${meter(available,active.total)}  ${bold(compact(available))} ${dim('available')}`));
- }else stdout.write(label('loadout',gold('EMPTY — roll your first model')));
+ }else{
+  stdout.write(`  ${gold('NO MODEL EQUIPPED')}\n  ${dim('Roll once to attach a model to this project.')}\n\n`);
+  stdout.write(label('project',bold(projectName())));
+ }
  stdout.write(label('vault',`${awards.length} ${awards.length===1?'model':'models'} · ${new URL(base()).host}`));
  const wallet=walletFrom(info);
  if(wallet)stdout.write(label('balance',`${bold(moneyMinor(wallet.balanceMinor))} · ${rollCostMinor(info)===null?'debit unavailable':moneyMinor(rollCostMinor(info))+' per roll'}`));
@@ -204,10 +246,11 @@ async function animation(award){
   }
  }finally{process.removeListener('SIGINT',interrupt);restore();}
 }
-function renderResult(award,replayed=false,roll){
+async function renderResult(award,replayed=false,roll){
  const meta=tier(award.choice.tier),available=award.available??award.remaining;
  stdout.write(`\n  ${meta.paint(meta.glyph+' '+meta.label+' ROLL')} ${replayed?dim('· recovered safely'):''}\n`);
- stdout.write(`  ${bold(award.choice.name)}\n  ${dim(award.choice.model)}\n\n`);
+ await writeModelHeadline(award.choice,meta,{animate:true});
+ stdout.write(`  ${dim(award.choice.model)}\n\n`);
  stdout.write(label('allocation',`${meter(available,award.total)}  ${bold(fmt(available))}`));
  stdout.write(label('roll id',dim(short(award.id))));
  if(Number.isSafeInteger(roll?.balanceAfterMinor))stdout.write(label('balance',`${moneyMinor(roll.balanceAfterMinor)} remaining`));
@@ -240,7 +283,7 @@ async function performRoll({compactOutput=false,ask=question}={}){
  const data=await json('/internal/spins',{body:{},headers:{'Idempotency-Key':rollId}});
  cfg.pendingRoll=null;cfg.model=data.award.id;writeConfig();
  await animation(data.award);
- if(flags.json)stdout.write(JSON.stringify(data)+'\n');else renderResult(data.award,data.replayed,data.roll);
+ if(flags.json)stdout.write(JSON.stringify(data)+'\n');else await renderResult(data.award,data.replayed,data.roll);
  return data.award;
 }
 function renderWallet(info,{withBrand=true}={}){
@@ -294,7 +337,7 @@ function renderInventory(awards,{withBrand=true}={}){
  const rows=[['','MODEL','RARITY','AVAILABLE','ID']];
  awards.forEach((award,index)=>{
   const meta=tier(award.choice.tier);
-  rows.push([award.id===cfg.model?'●':' ',`${index+1}. ${award.choice.name}`,meta.label,compact(award.available),short(award.id)]);
+  rows.push([award.id===cfg.model?'●':' ',`${index+1}. ${modelLabel(award.choice.model)}`,meta.label,compact(award.available),short(award.id)]);
  });
  table(rows);
  stdout.write(`\n  ${dim('● active  ·  select with')} ${bold('loot use <number>')}\n  ${dim('Full award IDs remain available with --json.')}\n\n`);
@@ -304,10 +347,28 @@ function renderOdds(pool,{withBrand=true}={}){
  stdout.write(`  ${gold('THE CURRENT POOL')}  ${dim('published odds')}\n\n`);
  for(const entry of pool.entries){
   const meta=tier(entry.tier),percent=entry.probability*100,filled=Math.round(percent/5);
-  stdout.write(`  ${String(percent.toFixed(percent%1?1:0)+'%').padStart(5)}  ${meta.paint('━'.repeat(filled))}${dim('─'.repeat(20-filled))}  ${meta.paint(meta.glyph)} ${entry.name} ${dim('· '+meta.label)}\n`);
+  stdout.write(`  ${String(percent.toFixed(percent%1?1:0)+'%').padStart(5)}  ${meta.paint('━'.repeat(filled))}${dim('─'.repeat(20-filled))}  ${meta.paint(meta.glyph)} ${modelLabel(entry.model)} ${dim('· '+meta.label)}\n`);
  }
  stdout.write(`\n  ${dim('RARITY LADDER')}\n  ${rarities.common.paint('◆ COMMON')}  ${rarities.uncommon.paint('⬟ UNCOMMON')}  ${rarities.rare.paint('✦ RARE')}\n  ${rarities.epic.paint('✧ EPIC')}    ${rarities.legendary.paint('✹ LEGENDARY')}\n`);
  stdout.write(`\n  ${gold('EVERY ROLL')} ${allocationCopy(pool)}\n  ${dim('Independent server-side draw · animation is cosmetic · odds are snapshotted')}\n  ${dim('pool '+short(pool.version))}\n\n`);
+}
+async function renderPreview({withBrand=true}={}){
+ const samples=[
+  {tier:'common',model:'GLM 5.3 Flash',note:'neutral silver'},
+  {tier:'uncommon',model:'MiMo V2.6 Pro',note:'emerald green'},
+  {tier:'rare',model:'GLM 5.3',note:'electric blue'},
+  {tier:'epic',model:'GPT-6 Sol',note:'purple light sweep'},
+  {tier:'legendary',model:'GPT-6 Astra',note:'warm-gold light sweep'}
+ ];
+ if(withBrand)brand();
+ stdout.write(`  ${gold('RARITY PREVIEW')}  ${dim('model-first treatment')}\n\n`);
+ for(const sample of samples){
+  const meta=tier(sample.tier);
+  stdout.write(`  ${meta.paint(meta.glyph+' '+meta.label)}\n`);
+  await writeModelHeadline(sample,meta,{animate:true,indent:'    '});
+  stdout.write(`    ${dim(sample.note)}\n\n`);
+ }
+ stdout.write(`  ${dim('Epic and Legendary shimmer on reveal. Reduced motion keeps a static glint.')}\n\n`);
 }
 function renderUsage(data){
  const rows=[['REQUEST','STATE','INPUT','OUTPUT','PROVIDER COST']];
@@ -326,13 +387,16 @@ async function resolveAward(value,awards){
  if(!award)throw Error('Model not found. Run loot inventory.');
  return award;
 }
-async function streamChat({model,messages,maxTokens,showHeader=true}){
+async function streamChat({model,choice,messages,maxTokens,showHeader=true}){
  const response=await api('/v1/chat/completions',{
   body:{model,messages,max_tokens:maxTokens,stream:true},
   headers:{'Idempotency-Key':randomUUID()}
  });
  let buffer='',usage=null,answer='';const decoder=new TextDecoder();
- if(showHeader)stdout.write(`\n  ${gold('◆ MODEL')}\n\n`);
+ if(showHeader){
+  if(choice){const meta=tier(choice.tier);stdout.write(`\n  ${meta.paint(meta.glyph+' '+meta.label)} ${dim('MODEL')}\n  ${modelHeadline(choice,meta)}\n\n`);}
+  else stdout.write(`\n  ${gold('◆ MODEL')}\n\n`);
+ }
  const consume=line=>{
   if(!line.startsWith('data:'))return;
   const value=line.slice(5).trim();if(!value||value==='[DONE]')return;
@@ -366,7 +430,7 @@ async function play(){
     const [action,...rest]=input.slice(1).trim().split(/\s+/);const value=rest.join(' ');
     if(['exit','quit','q'].includes(action))break;
     if(action==='help'){
-     stdout.write(`\n  ${bold('/roll')}      roll and keep this session context\n  ${bold('/models')}    inspect your vault\n  ${bold('/use N')}     switch to model N\n  ${bold('/odds')}      inspect the published pool\n  ${bold('/wallet')}    inspect funds and roll debit\n  ${bold('/topup')}     add the fixed wallet reload\n  ${bold('/status')}    show the current loadout\n  ${bold('/new')}       clear in-memory conversation context\n  ${bold('/clear')}     clear the terminal\n  ${bold('/exit')}      leave LootLM\n\n`);continue;
+     stdout.write(`\n  ${bold('/roll')}      roll and keep this session context\n  ${bold('/models')}    inspect your vault\n  ${bold('/use N')}     switch to model N\n  ${bold('/odds')}      inspect the published pool\n  ${bold('/preview')}   preview every rarity treatment\n  ${bold('/wallet')}    inspect funds and roll debit\n  ${bold('/topup')}     add the fixed wallet reload\n  ${bold('/status')}    show the current model\n  ${bold('/new')}       clear in-memory conversation context\n  ${bold('/clear')}     clear the terminal\n  ${bold('/exit')}      leave LootLM\n\n`);continue;
     }
     if(action==='roll'){
      try{
@@ -376,6 +440,7 @@ async function play(){
     }
     if(action==='models'||action==='vault'){allowances=await json('/v1/allowances');awards=allowances.data;renderInventory(awards,{withBrand:false});continue;}
     if(action==='odds'){pool=await json('/internal/pool');renderOdds(pool,{withBrand:false});continue;}
+    if(action==='preview'){await renderPreview({withBrand:false});continue;}
     if(action==='wallet'){info=await json('/internal/me');renderWallet(info,{withBrand:false});continue;}
     if(action==='topup'){try{await topup();info=await json('/internal/me');}catch(error){showError(error);}continue;}
     if(action==='status'){
@@ -384,7 +449,8 @@ async function play(){
     }
     if(action==='use'){
      const award=await resolveAward(value,awards);cfg.model=award.id;writeConfig();
-     stdout.write(`  ${gold('ACTIVE')} ${bold(award.choice.name)} ${dim('· session context kept')}\n\n`);continue;
+     const meta=tier(award.choice.tier);
+     stdout.write(`  ${gold('ACTIVE')} ${modelHeadline(award.choice,meta)} ${dim('· session context kept')}\n  ${dim(award.choice.model)}\n\n`);continue;
     }
     if(action==='new'){messages=[];stdout.write(`  ${gold('NEW SESSION')} ${dim('Conversation context cleared; model unchanged.')}\n\n`);continue;}
     if(action==='clear'){stdout.write('\x1bc');renderStatus(info,pool,awards);continue;}
@@ -394,7 +460,7 @@ async function play(){
    if(!award){stdout.write(`  ${gold('No model equipped.')} Run ${bold('/roll')} first.\n\n`);continue;}
    messages.push({role:'user',content:input});
    try{
-    const reply=await streamChat({model:award.id,messages,maxTokens:Math.min(Number(flags['max-tokens']||512),info.maxOutput),showHeader:true});
+    const reply=await streamChat({model:award.id,choice:award.choice,messages,maxTokens:Math.min(Number(flags['max-tokens']||512),info.maxOutput),showHeader:true});
     if(reply.answer)messages.push({role:'assistant',content:reply.answer});
     allowances=await json('/v1/allowances');awards=allowances.data;
    }catch(error){messages.pop();showError(error);}
@@ -403,7 +469,7 @@ async function play(){
 }
 function help(){
  brand();
- stdout.write(`${gold('  OPEN THE ARCADE')}\n  ${royalBold('loot')}                           Interactive prompt shell\n  ${gold('loot roll')}                      Roll and equip a model\n  ${gold('loot chat "prompt"')}             Send one prompt\n\n${gold('  YOUR LOADOUT')}\n  loot status                     Project, model, and allocation\n  loot inventory                  Models in your vault\n  loot use <number|award_id>       Equip a saved model\n  loot odds                       Exact published chances\n  loot usage                      Request and token ledger\n\n${gold('  WALLET')}\n  loot wallet                     Balance and roll debit\n  loot topup                      Fixed secure reload\n\n${gold('  ACCOUNT + INTEGRATION')}\n  loot login [--url URL] [--email EMAIL]\n  loot keys list|create|revoke\n  loot config                     Safe local configuration\n  loot logout\n  loot serve                      Start the private API server\n\n  ${dim('--json for automation · --no-animation · NO_COLOR=1')}\n  ${dim('The lootlm command remains a compatibility alias.')}\n  ${dim('Internal test build. No payment is collected in demo mode.')}\n\n`);
+ stdout.write(`${gold('  OPEN THE ARCADE')}\n  ${royalBold('loot')}                           Interactive prompt shell\n  ${gold('loot roll')}                      Roll and equip a model\n  ${gold('loot chat "prompt"')}             Send one prompt\n\n${gold('  YOUR MODELS')}\n  loot status                     Project, model, and allocation\n  loot inventory                  Models in your vault\n  loot use <number|award_id>       Equip a saved model\n  loot odds                       Exact published chances\n  loot preview                    Preview all rarity treatments\n  loot usage                      Request and token ledger\n\n${gold('  WALLET')}\n  loot wallet                     Balance and roll debit\n  loot topup                      Fixed secure reload\n\n${gold('  ACCOUNT + INTEGRATION')}\n  loot login [--url URL] [--email EMAIL]\n  loot keys list|create|revoke\n  loot config                     Safe local configuration\n  loot logout\n  loot serve                      Start the private API server\n\n  ${dim('--json for automation · --no-animation · NO_COLOR=1')}\n  ${dim('The lootlm command remains a compatibility alias.')}\n  ${dim('Internal test build. No payment is collected in demo mode.')}\n\n`);
 }
 function showError(error){
  const hints={
@@ -460,12 +526,14 @@ async function main(){
   if(flags.json)stdout.write(JSON.stringify({info,pool,awards:allowances.data})+'\n');else renderStatus(info,pool,allowances.data);return;
  }
  if(cmd==='roll'){await performRoll();return;}
+ if(cmd==='preview'){await renderPreview();return;}
  if(cmd==='inventory'||cmd==='vault'){
   const data=await json('/v1/allowances');if(flags.json)stdout.write(JSON.stringify(data)+'\n');else renderInventory(data.data);return;
  }
  if(cmd==='use'){
   const awards=(await json('/v1/allowances')).data;const award=await resolveAward(args[0],awards);
-  cfg.model=award.id;writeConfig();stdout.write(`\n  ${gold('ACTIVE')} ${bold(award.choice.name)}\n  ${dim(award.choice.model+' · '+short(award.id))}\n\n`);return;
+  const meta=tier(award.choice.tier);cfg.model=award.id;writeConfig();
+  stdout.write(`\n  ${gold('ACTIVE')} ${modelHeadline(award.choice,meta)}\n  ${dim(award.choice.model+' · '+short(award.id))}\n\n`);return;
  }
  if(cmd==='odds'){
   const data=await json('/internal/pool');if(flags.json)stdout.write(JSON.stringify(data)+'\n');else renderOdds(data);return;
@@ -496,8 +564,8 @@ async function main(){
    stdout.write(JSON.stringify(await response.json())+'\n');return;
   }
   const awards=(await json('/v1/allowances')).data,award=awards.find(item=>item.id===model);
-  brand();if(award)stdout.write(label('loadout',`${tier(award.choice.tier).paint(award.choice.name)} ${dim('· '+compact(award.available)+' available')}`));
-  await streamChat({model,messages:[{role:'user',content:prompt}],maxTokens,showHeader:true});return;
+  brand();if(award){const meta=tier(award.choice.tier);stdout.write(`  ${meta.paint(meta.glyph+' '+meta.label)} ${dim('MODEL')}\n  ${modelHeadline(award.choice,meta)} ${dim('· '+compact(award.available)+' available')}\n  ${dim(award.choice.model)}\n`);}
+  await streamChat({model,choice:award?.choice,messages:[{role:'user',content:prompt}],maxTokens,showHeader:!award});return;
  }
  if(cmd==='admin'){
   const sub=args[0]||'status';let data;

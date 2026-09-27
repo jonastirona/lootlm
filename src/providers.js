@@ -9,7 +9,7 @@ export class DemoProvider {
  async generate(body,choice,{onChunk,onId}){
   const rid='demo_'+crypto.randomUUID();onId(rid);
   const last=body.messages.filter(m=>m.role==='user').at(-1)?.content||'';
-  const content=`[LootLM demo · ${choice.name}]\n\nYour allowance is connected. You said: ${last}\n\nThis is a simulated response, not output from ${choice.model}. Add an OpenRouter key and review the live model pool to run real inference.`;
+  const content=`[LootLM demo · ${choice.model}]\n\nYour allowance is connected. You said: ${last}\n\nThis is a simulated response, not output from ${choice.model}. Add an OpenRouter key and review the live model pool to run real inference.`;
   const input=Math.ceil(Buffer.byteLength(JSON.stringify(body.messages))/4);
   const output=Math.min(body.max_tokens,Math.ceil(Buffer.byteLength(content)/4));const text=content.slice(0,output*4);
   const tools=body.tool_choice==='required'||typeof body.tool_choice==='object';
