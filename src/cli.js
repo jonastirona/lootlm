@@ -469,7 +469,7 @@ async function play(){
 }
 function help(){
  brand();
- stdout.write(`${gold('  OPEN THE ARCADE')}\n  ${royalBold('loot')}                           Interactive prompt shell\n  ${gold('loot roll')}                      Roll and equip a model\n  ${gold('loot chat "prompt"')}             Send one prompt\n\n${gold('  YOUR MODELS')}\n  loot status                     Project, model, and allocation\n  loot inventory                  Models in your vault\n  loot use <number|award_id>       Equip a saved model\n  loot odds                       Exact published chances\n  loot preview                    Preview all rarity treatments\n  loot usage                      Request and token ledger\n\n${gold('  WALLET')}\n  loot wallet                     Balance and roll debit\n  loot topup                      Fixed secure reload\n\n${gold('  ACCOUNT + INTEGRATION')}\n  loot login [--url URL] [--email EMAIL]\n  loot keys list|create|revoke\n  loot config                     Safe local configuration\n  loot logout\n  loot serve                      Start the private API server\n\n  ${dim('--json for automation · --no-animation · NO_COLOR=1')}\n  ${dim('The lootlm command remains a compatibility alias.')}\n  ${dim('Internal test build. No payment is collected in demo mode.')}\n\n`);
+ stdout.write(`${gold('  OPEN THE ARCADE')}\n  ${royalBold('loot')}                           Interactive prompt shell\n  loot demo                      Free isolated demo; no login needed\n  ${gold('loot roll')}                      Roll and equip a model\n  ${gold('loot chat "prompt"')}             Send one prompt\n\n${gold('  YOUR MODELS')}\n  loot status                     Project, model, and allocation\n  loot inventory                  Models in your vault\n  loot use <number|award_id>       Equip a saved model\n  loot odds                       Exact published chances\n  loot preview                    Preview all rarity treatments\n  loot usage                      Request and token ledger\n\n${gold('  WALLET')}\n  loot wallet                     Balance and roll debit\n  loot topup                      Fixed secure reload\n\n${gold('  ACCOUNT + INTEGRATION')}\n  loot login [--url URL] [--email EMAIL]\n  loot keys list|create|revoke\n  loot config                     Safe local configuration\n  loot logout\n  loot serve                      Start the private API server\n\n  ${dim('--json for automation · --no-animation · NO_COLOR=1')}\n  ${dim('The lootlm command remains a compatibility alias.')}\n  ${dim('Internal test build. No payment is collected in demo mode.')}\n\n`);
 }
 function showError(error){
  const hints={
@@ -490,8 +490,9 @@ function showError(error){
 }
 
 async function main(){
+ if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args);return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.2.0\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.2.1\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});

@@ -94,3 +94,7 @@ loot admin resolve --id req_ID --input 20 --output 40 --cost 0.001 --note "Verif
 ## Provider diagnostics
 
 `loot doctor` checks the upstream key without inference. `loot admin models` lists eligible catalog models. `loot admin pool --file config/openrouter-common.json` prepares a separate live pool. `loot request req_ID` inspects your request; `loot admin retry --id req_ID` retries usage reconciliation without regenerating output.
+
+## No-setup demo
+
+Run `loot demo` for an isolated local sandbox with automatic login. No upstream key, live requests or payments are used. Try `/roll`, a prompt, `/models`, `/odds`, `/preview`, `/status`, then `/exit`. The temporary vault and credentials are removed on exit; your normal account configuration is unchanged. Responses are simulated echoes, not real model intelligence. `loot demo status` runs a single command in a fresh sandbox.
