@@ -2,7 +2,7 @@
 
 LootLM has one user surface: the terminal. The short command is `loot`; `lootlm` is retained as a compatibility alias.
 
-Install the downloaded package with `npm install -g ./lootlm-0.4.0.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
+Install the downloaded package with `npm install -g ./lootlm-0.5.0.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
 
 ## First run
 
@@ -48,7 +48,7 @@ The latest roll becomes active. `loot use` accepts the displayed inventory numbe
 
 `loot collection` is the single collection and probability surface. It shows all 24 model cards, tier totals, exact per-model odds, owned status, and catalog-advertised tool/context metadata. The redundant odds command and standalone rarity preview were removed; probabilities and rarity treatments now appear on the model cards and in the reel itself.
 
-An animated roll uses a full-screen, three-reel slot cabinet. Every model has a stable sigil and tier-specific card frame. The three reels move independently, lock sequentially on the center payline, and finish on three copies of the persisted award. `--no-animation`, `LOOTLM_REDUCED_MOTION=1`, and narrow or noninteractive terminals skip the cabinet without changing the result.
+An animated roll uses one large vertical model reel. Every model has a stable sigil and tier-specific card frame. The player pulls a rendered lever with Space, Enter, or a terminal mouse click, then the reel cycles through the real collection and decelerates onto the persisted award. The slowdown traverses a complete model cycle, so rare cards visibly pass the payline without changing the draw. The layout contracts for short terminal panels instead of skipping animation. `--no-animation`, `LOOTLM_REDUCED_MOTION=1`, and noninteractive output render the result directly.
 
 ## Login and credentials
 
@@ -63,7 +63,7 @@ Logout attempts to revoke the saved CLI key and then removes it locally.
 - Interactive chrome uses burgundy framing, royal-red activity, and antique-gold actions. Rarity colors are reserved for model rarity and always paired with a glyph and label.
 - `--json` is supported for roll, inventory, collection, status, usage, keys, login, and chat.
 - `--no-animation` or `LOOTLM_REDUCED_MOTION=1` skips the reveal.
-- Noninteractive or narrow terminals skip animation automatically.
+- Noninteractive terminals skip animation automatically; narrow interactive terminals use the compact reel layout.
 - `NO_COLOR=1` removes ANSI color; rarity glyphs and labels remain.
 
 JSON chat returns the full nonstreaming completion. Interactive and ordinary one-shot chat stream text.

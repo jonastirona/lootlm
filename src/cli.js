@@ -233,38 +233,49 @@ function renderStatus(info,pool,awards,{withBrand=true}={}){
  const wallet=walletFrom(info);if(wallet)stdout.write(`  ${moneyMinor(wallet.balanceMinor)} balance · ${rollCostMinor(info)===null?'debit unavailable':moneyMinor(rollCostMinor(info))+' / roll'}\n`);
  stdout.write('\n');
 }
+async function pullLever(reader){
+ if(flags.json||flags['no-animation']||!stdout.isTTY||process.env.LOOTLM_REDUCED_MOTION==='1')return;
+ const wasRaw=stdin.isRaw;reader?.pause();stdin.setRawMode(true);stdin.resume();
+ stdout.write(`\n  ${hotPink('╭───────────╮')}       ${gold('●')}\n  ${hotPink('│ PULL REEL │')}       ${gold('┃')}\n  ${hotPink('╰───────────╯')}       ${gold('┗━━━')}\n  ${cyan('PRESS SPACE / ENTER OR CLICK THE HANDLE')} `);
+ stdout.write('\x1b[?1000h\x1b[?1006h');
+ try{
+  await new Promise((resolve,reject)=>{
+   const read=chunk=>{const value=chunk.toString();if(value.includes('\u0003')){stdin.off('data',read);reject(Error('Canceled'));return;}if(/[ \r\n]/.test(value)||/\x1b\[<0;\d+;\d+[Mm]/.test(value)){stdin.off('data',read);resolve();}};
+   stdin.on('data',read);
+  });
+ }finally{
+  stdout.write('\x1b[?1000l\x1b[?1006l');stdin.setRawMode(!!wasRaw);stdin.pause();reader?.resume();
+ }
+ const lever=['●  ┃','┃  ●','┃  ┃','┗━━●'];
+ for(const state of lever){stdout.write(`\r\x1b[2K  ${hotPink('⚡')} ${gold(state)} ${royalBold('LEVER PULLED')}`);await sleep(85);}
+ stdout.write('\r\x1b[2K');
+}
 async function animation(award,entries){
- if(flags.json||flags['no-animation']||!stdout.isTTY||(stdout.columns&&stdout.columns<70)||(stdout.rows&&stdout.rows<22)||process.env.LOOTLM_REDUCED_MOTION==='1')return;
+ if(flags.json||flags['no-animation']||!stdout.isTTY||process.env.LOOTLM_REDUCED_MOTION==='1')return;
  const candidates=entries.length?entries:[award.choice],winner=award.choice,winMeta=tier(winner.tier);
- const columns=Math.max(72,stdout.columns||80),rows=Math.max(22,stdout.rows||24),limit=Math.min(78,columns-2),reelWidth=Math.floor((limit-4)/3),panel=reelWidth*3+4;
+ const columns=Math.max(44,stdout.columns||80),rows=Math.max(12,stdout.rows||24),panel=Math.min(66,columns-4),cardWidth=Math.min(54,panel-6),landing=candidates.findIndex(item=>item.model===winner.model);
  const center=text=>{const length=safeText(text).replace(/\x1b\[[0-9;]*m/g,'').length;return ' '.repeat(Math.max(0,Math.floor((columns-length)/2)))+text;};
  const bulbs=frame=>Array.from({length:Math.floor(panel/2)},(_,i)=>(i+frame)%3===0?hotPink('●'):i%2?cyan('✦'):gold('●')).join(' ');
- const stops=[40,49,58],speeds=[5,7,11],frames=59;
- const reelChoices=(frame,reel,final)=>{
-  if(final||frame>=stops[reel])return [candidates[(candidates.indexOf(winner)-1+candidates.length)%candidates.length],winner,candidates[(candidates.indexOf(winner)+1)%candidates.length]];
-  const index=(frame*speeds[reel]+reel*8)%candidates.length;
-  return [candidates[(index-1+candidates.length)%candidates.length],candidates[index],candidates[(index+1)%candidates.length]];
- };
+ const fast=38,slow=30,positions=Array.from({length:fast},(_,i)=>(i*5)%candidates.length);
+ for(let i=0;i<slow;i++)positions.push((landing-(slow-1)+i+candidates.length*4)%candidates.length);
  const draw=(frame,final=false)=>{
-  const lines=[center(bulbs(frame)),center(gold('╔'+'═'.repeat(panel-2)+'╗')),center(gold('║')+royalBold(centeredPlain(final?(winMeta.rank===6?'!!! MYTHIC JACKPOT !!!':'!!! MODEL PAYOUT !!!'):'⚡  LOOTLM TRIPLE-REEL MODEL CASINO  ⚡',panel-2))+gold('║')),center(gold('╠'+'═'.repeat(reelWidth)+'╦'+'═'.repeat(reelWidth)+'╦'+'═'.repeat(reelWidth)+'╣'))];
-  const reels=[0,1,2].map(reel=>reelChoices(frame,reel,final));
-  for(let row=0;row<3;row++){
-   const cards=reels.map((reel,reelIndex)=>slotCard(reel[row],reelWidth,{hot:row===1&&(final||frame>=stops[reelIndex])}));
-   for(let line=0;line<3;line++)lines.push(center(gold('║')+cards[0][line]+gold('║')+cards[1][line]+gold('║')+cards[2][line]+gold('║')));
-   if(row===1)lines.push(center(hotPink('▶▶▶')+gold('═'.repeat(panel-6))+hotPink('◀◀◀')));
-  }
-  lines.push(center(gold('╚'+'═'.repeat(reelWidth)+'╩'+'═'.repeat(reelWidth)+'╩'+'═'.repeat(reelWidth)+'╝')));
-  const stopped=stops.filter(stop=>frame>=stop).length,progress=Math.round((Math.min(frame,frames-1)/(frames-1))*(panel-12));
+  const index=final?landing:positions[frame],current=candidates[index],before=candidates[(index-1+candidates.length)%candidates.length],after=candidates[(index+1)%candidates.length];
+  const lines=[center(bulbs(frame)),center(gold('╔'+'═'.repeat(panel-2)+'╗')),center(gold('║')+royalBold(centeredPlain(final?(winMeta.rank===6?'!!! MYTHIC JACKPOT !!!':'!!! MODEL PAYOUT !!!'):'⚡  LOOTLM HIGH-VOLTAGE MODEL REEL  ⚡',panel-2))+gold('║')),center(gold('╠'+'═'.repeat(panel-2)+'╣'))];
+  if(rows>=19)lines.push(center(dim(`▲ ${modelSigils[before.model]||'AI'} · ${fitPlain(modelLabel(before.model),Math.max(8,panel-12))} ▲`)));
+  const card=slotCard(current,cardWidth,{hot:final});for(const line of card)lines.push(center(line));
+  if(rows>=19)lines.push(center(dim(`▼ ${modelSigils[after.model]||'AI'} · ${fitPlain(modelLabel(after.model),Math.max(8,panel-12))} ▼`)));
+  lines.push(center(hotPink('▶▶▶')+gold('═'.repeat(panel-6))+hotPink('◀◀◀')),center(gold('╚'+'═'.repeat(panel-2)+'╝')));
+  const progress=Math.round(((final?positions.length:frame+1)/positions.length)*(panel-12));
   lines.push(center(final?winMeta.paint(`${winMeta.glyph} ${modelLabel(winner.model)} ${winMeta.glyph}`):royalRed('▰'.repeat(progress))+burgundy('▱'.repeat(panel-12-progress))));
-  lines.push(center(final?shineText('1,000,000 TOKENS UNLOCKED',winMeta,frame%24):dim(`${stopped}/3 REELS LOCKED · ${frame<30?'MAXIMUM VELOCITY':frame<49?'BRAKING HARD':'FINAL REEL'}`)));
-  lines.push(center(final?hotPink('✦ ✦ ✦ EQUIPPED AND READY ✦ ✦ ✦'):cyan('PULLING FROM 24 MODEL CARDS')));
+  lines.push(center(final?shineText('1,000,000 TOKENS UNLOCKED',winMeta,frame%24):dim(frame<fast?'REEL AT MAXIMUM VELOCITY':'DECELERATING · WATCH THE PAYLINE')));
+  lines.push(center(final?hotPink('✦ ✦ ✦ EQUIPPED AND READY ✦ ✦ ✦'):cyan(`${modelSigils[current.model]||'AI'} CARD ${String(index+1).padStart(2,'0')} / ${candidates.length}`)));
   stdout.write('\x1b[H'+lines.slice(0,rows).map(line=>'\x1b[2K'+line).join('\n'));
  };
  stdout.write('\x1b[?1049h\x1b[2J\x1b[H\x1b[?25l');
  const restore=()=>stdout.write('\x1b[?25h\x1b[?1049l');
  const interrupt=()=>{restore();process.exit(130);};process.once('SIGINT',interrupt);
  try{
-  for(let frame=0;frame<frames;frame++){draw(frame);await sleep(frame>52?150:frame>38?92:48);}
+  for(let frame=0;frame<positions.length;frame++){draw(frame);await sleep(frame<fast?44:75+(frame-fast)*7);}
   for(let frame=0;frame<(winMeta.rank>=4?24:14);frame++){draw(frame,true);await sleep(80);}
   await sleep(winMeta.rank>=4?850:500);
  }finally{process.removeListener('SIGINT',interrupt);restore();}
@@ -292,13 +303,14 @@ async function confirmPaidRoll(info,pool,ask=question){
  if(!/^y(?:es)?$/i.test(answer)){stdout.write(`\n  ${dim('Roll canceled. Nothing was deducted.')}\n\n`);return false;}
  return true;
 }
-async function performRoll({compactOutput=false,ask=question}={}){
+async function performRoll({compactOutput=false,ask=question,reader}={}){
  const [info,pool]=await Promise.all([json('/internal/me'),json('/internal/pool')]);
  if(!flags.json&&!compactOutput){
   brand(info.provider);
-  stdout.write(`  ${hotPink('⚡ PULL THE LEVER ⚡')}\n  ${bold(rollTerms(info,pool))}\n  ${dim('The server locks the award before the reels move. /collection shows exact odds.')}\n\n`);
+  stdout.write(`  ${hotPink('⚡ PULL THE LEVER ⚡')}\n  ${bold(rollTerms(info,pool))}\n  ${dim('The server locks the award before the reel moves. /collection shows exact odds.')}\n\n`);
  }
  if(!await confirmPaidRoll(info,pool,ask))return null;
+ await pullLever(reader);
  const rollId=cfg.pendingRoll||randomUUID();cfg.pendingRoll=rollId;writeConfig();
  const data=await json('/internal/spins',{body:{},headers:{'Idempotency-Key':rollId}});
  cfg.pendingRoll=null;cfg.model=data.award.id;writeConfig();
@@ -445,11 +457,11 @@ async function play(){
     const [action,...rest]=input.slice(1).trim().split(/\s+/);const value=rest.join(' ');
     if(['exit','quit','q'].includes(action))break;
     if(action==='help'){
-     stdout.write(`\n  ${hotPink('⚡ ARCADE CONTROLS ⚡')}\n\n  ${bold('/roll')}        pull the triple-reel machine\n  ${bold('/models')}      open your model-card vault\n  ${bold('/collection')}  browse cards, capabilities, and exact odds\n  ${bold('/use N')}       slam card N onto the active payline\n  ${bold('/status')}      show the equipped card\n  ${bold('/new')}         clear in-memory conversation context\n  ${bold('/clear')}       redraw the cabinet\n  ${bold('/exit')}        cash out of this terminal session\n\n`);continue;
+     stdout.write(`\n  ${hotPink('⚡ ARCADE CONTROLS ⚡')}\n\n  ${bold('/roll')}        pull the high-voltage model reel\n  ${bold('/models')}      open your model-card vault\n  ${bold('/collection')}  browse cards, capabilities, and exact odds\n  ${bold('/use N')}       slam card N onto the active payline\n  ${bold('/status')}      show the equipped card\n  ${bold('/new')}         clear in-memory conversation context\n  ${bold('/clear')}       redraw the cabinet\n  ${bold('/exit')}        cash out of this terminal session\n\n`);continue;
     }
     if(action==='roll'){
      try{
-      const award=await performRoll({compactOutput:true,ask:prompt=>reader.question(prompt)});
+      const award=await performRoll({compactOutput:true,ask:prompt=>reader.question(prompt),reader});
       if(award){allowances=await json('/v1/allowances');awards=allowances.data;}
      }catch(error){showError(error);}continue;
     }
@@ -483,7 +495,7 @@ async function play(){
 }
 function help(){
  brand();
- stdout.write(`${hotPink('  ⚡ OPEN THE MODEL CASINO ⚡')}\n  ${royalBold('loot')}                           Interactive casino shell\n  loot demo                      Free isolated casino; no login needed\n  ${hotPink('loot roll')}                      Pull the triple-reel machine\n  ${cyan('loot chat "prompt"')}             Use the equipped model\n\n${gold('  ◆ MODEL CARDS ◆')}\n  loot status                     Equipped card and token meter\n  loot inventory                  Your discovered-card vault\n  loot collection                 All cards, capabilities, and exact odds\n  loot use <number|award_id>       Equip a discovered card\n  loot usage                      Request and token ledger\n\n${gold('  ACCOUNT + INTEGRATION')}\n  loot login [--url URL] [--email EMAIL]\n  loot keys list|create|revoke\n  loot config                     Safe local configuration\n  loot logout\n  loot serve                      Start the private API server\n\n  ${dim('--json for automation · --no-animation · NO_COLOR=1')}\n  ${dim('Internal test build. No payment is collected in demo mode.')}\n\n`);
+ stdout.write(`${hotPink('  ⚡ OPEN THE MODEL CASINO ⚡')}\n  ${royalBold('loot')}                           Interactive casino shell\n  loot demo                      Free isolated casino; no login needed\n  ${hotPink('loot roll')}                      Pull the high-voltage model reel\n  ${cyan('loot chat "prompt"')}             Use the equipped model\n\n${gold('  ◆ MODEL CARDS ◆')}\n  loot status                     Equipped card and token meter\n  loot inventory                  Your discovered-card vault\n  loot collection                 All cards, capabilities, and exact odds\n  loot use <number|award_id>       Equip a discovered card\n  loot usage                      Request and token ledger\n\n${gold('  ACCOUNT + INTEGRATION')}\n  loot login [--url URL] [--email EMAIL]\n  loot keys list|create|revoke\n  loot config                     Safe local configuration\n  loot logout\n  loot serve                      Start the private API server\n\n  ${dim('--json for automation · --no-animation · NO_COLOR=1')}\n  ${dim('Internal test build. No payment is collected in demo mode.')}\n\n`);
 }
 function showError(error){
  const hints={
@@ -506,7 +518,7 @@ function showError(error){
 async function main(){
  if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args,{json:!!flags.json});return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.4.0\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.5.0\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});

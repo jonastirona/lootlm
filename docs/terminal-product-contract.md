@@ -27,7 +27,7 @@ Gold is an interaction and cabinet accent; it does not imply a Legendary result.
 
 The actual model is the headline. Every collection model has a stable two-character card sigil, provider label, model title, rarity frame, glyph, and color. User-facing views derive the title from the provider model identifier. Pool aliases may remain in snapshots for API compatibility, but names such as `Code Wizard`, `Daily Driver`, or `Mythic Mind` must not appear in the human CLI.
 
-A roll opens a full-screen three-reel cabinet. Each reel cycles through actual collection cards at a different rate, stops independently, and lands the persisted award on the center payline. The payout sequence shows three matching cards. Epic, Legendary, and Mythic titles receive an additional light sweep. Reduced-motion, narrow-terminal, and noninteractive output skip the cabinet and render the result directly.
+A roll begins with a rendered lever that accepts Space, Enter, or an SGR terminal mouse click. It then opens one large vertical reel because each draw awards one model. The reel cycles through actual collection cards, traverses a complete cycle while slowing, and lands the persisted award on the center payline. Epic, Legendary, and Mythic titles receive an additional light sweep. The layout contracts for short terminal panels. Reduced-motion and noninteractive output skip the cabinet and render the result directly.
 
 ## Core loop
 
