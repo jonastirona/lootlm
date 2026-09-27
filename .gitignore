@@ -1,0 +1,10 @@
+node_modules/
+.lootlm/
+.env*
+!.env.example
+*.tgz
+coverage/
+*.pem
+*.key
+credentials*.json
+.DS_Store

@@ -1,0 +1,35 @@
+{
+  "name": "lootlm",
+  "version": "0.1.0",
+  "description": "Private model slots and inference gateway, with a terminal arcade.",
+  "type": "module",
+  "private": false,
+  "bin": {
+    "lootlm": "./src/cli.js"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/server.js && node --check src/store.js && node --check src/providers.js && node --check src/cli.js && node --check public/app.js",
+    "pack:check": "npm pack --dry-run",
+    "package": "npm pack --pack-destination .."
+  },
+  "engines": {
+    "node": ">=24.2.0"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "files": [
+    "src",
+    "public",
+    "docs",
+    "README.md",
+    ".env.example"
+  ],
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "openai": "^7.23.0"
+  }
+}
