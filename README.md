@@ -13,14 +13,14 @@ This branch contains a working terminal UX over Jonas's original API:
 - `loot` opens an interactive prompt shell; `lootlm` remains a compatibility alias.
 - The interface uses burgundy framing, a royal-red wordmark and meters, and antique-gold actions for a restrained royal arcade identity.
 - The real model is always the headline; internal pool nicknames such as `Code Wizard` never appear in the human CLI.
-- Epic and Legendary models receive an animated light sweep during reveals and a static glint when motion is reduced.
+- Epic, Legendary, and Mythic models receive an animated light sweep during reveals and a static glint when motion is reduced.
 - The selected model, project, token allocation, published odds, vault, usage, and errors are legible in-terminal.
 - Conversation context follows the user across rolls while that shell remains open.
-- Common, Uncommon, Rare, Epic, and Legendary each have a distinct ANSI color, glyph, and text label. Legendary is reserved for each 2% pool entry. Mythic is not in the MVP.
+- Starter, Common, Specialist, Epic, Legendary, and Mythic each have a distinct ANSI color, glyph, and text label.
 - Animations are cosmetic. The cryptographically random server result is persisted first and survives an interrupted reveal.
 - `--json`, `NO_COLOR=1`, reduced motion, and narrow/noninteractive terminals remain supported.
 
-The backend still grants one million shared **test** tokens from a four-model placeholder pool. It has no wallet, real checkout, $0.50 debit, 100k-fresh-input/20k-output split, or durable project checkpoint API yet. Those are explicit integration seams in [the terminal product contract](docs/terminal-product-contract.md), not shipped claims.
+The backend grants one million shared **test** tokens from the 24-model Discovery 01 demo pool. It has no wallet, real checkout, $0.50 debit, 100k-fresh-input/20k-output split, or durable project checkpoint API yet. Those are explicit integration seams in [the terminal product contract](docs/terminal-product-contract.md), not shipped claims.
 
 ## Run the internal build
 
@@ -101,22 +101,9 @@ The planned `loot topup` command creates a fresh server-side Stripe Checkout Ses
 
 ## Target model pool
 
-Provider availability and distribution policy must be verified before any paid pool is published. Display names below are product inputs, not claims that the models are currently orderable through a particular provider.
+Discovery 01 contains 24 distinct model IDs across Starter, Common, Specialist, Epic, Legendary, and Mythic. Tier probabilities are provisionally 30%, 35%, 20%, 10%, 4%, and 1%. Run `loot collection` for exact per-model odds and capability metadata, or see [the collection contract](docs/collection.md).
 
-| Rarity | Model | Chance |
-| --- | --- | ---: |
-| Common | GLM 5.3 Flash | 25% |
-| Common | DeepSeek V4.1 Flash | 20% |
-| Uncommon | MiMo V2.6 Pro | 15% |
-| Uncommon | Gemini 3.8 Flash | 10% |
-| Rare | GLM 5.3 | 9% |
-| Rare | Grok 4.7 | 7% |
-| Epic | Approved non-Claude/non-OpenAI frontier replacement (pending) | 6% |
-| Epic | Claude Opus 5.5 | 4% |
-| Legendary | Claude Fable 5.1 | 2% |
-| Legendary | GPT-6 Astra | 2% |
-
-Claude is allowlisted at Opus 5.5 and Fable only. OpenAI/Codex is allowlisted at GPT Astra only. Claude Sonnet, GPT Sol, Codex mini, and other lower substitutions are rejected during pool publication. The pending 6% slot must be filled with an approved non-Claude/non-OpenAI model before this target pool can ship.
+Provider availability and distribution policy must be verified before any paid pool is published. The checked-in live draft proves only that the IDs and advertised metadata appeared in the current catalog. It does not prove supplier permission, tested reliability, quality ordering, or viable economics.
 
 ## Existing API and safety controls
 
@@ -153,3 +140,9 @@ The automated suite is local and uses a simulated provider, so it creates no mod
 ## OpenRouter backend setup
 
 See [OpenRouter setup](docs/openrouter.md) for separate demo/live pools, price ceilings, `loot doctor`, request inspection and the capped live smoke test. Pending usage is reconciled with durable backoff; uncertain requests retain reservations.
+
+## Collection and integrations
+
+The demo now uses the 24-model **Discovery 01** collection with six visual tiers and provisional 30% / 35% / 20% / 10% / 4% / 1% tier odds. See [the collection contract](docs/collection.md). The terminal reveal is cosmetic; the server commits the result before the full-screen model reel starts.
+
+LootLM is intended to be a token and model gateway, not a replacement coding harness. Generic agents and chatbots can use the existing OpenAI-compatible Chat Completions endpoint. Claude Code requires an Anthropic Messages adapter, Codex requires a Responses adapter, and Cursor's documented BYOK route does not cover custom Tab completion. See [the integration matrix](docs/integrations.md).

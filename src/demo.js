@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {config} from './config.js';
 import {createApp} from './server.js';
 
-export async function runDemo(args=[]){
+export async function runDemo(args=[],options={}){
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'lootlm-demo-'));
  const cfg=config({LOOTLM_DATA_DIR:dir,LOOTLM_PROVIDER:'demo',LOOTLM_ACCESS_CODE:randomUUID()});
  const {app,store}=createApp(cfg);
@@ -17,8 +17,9 @@ export async function runDemo(args=[]){
   const url=`http://127.0.0.1:${server.address().port}`;
   const user=store.user('demo@lootlm.local');
   const key=store.credential(user,'key','Temporary demo').key;
-  process.stdout.write('\n  Demo · simulated responses · no charges · vault resets on exit.\n\n');
-  const child=spawn(process.execPath,[fileURLToPath(new URL('./cli.js',import.meta.url)),...(args.length?args:['play'])],{
+  if(!options.json)process.stdout.write('\n  Demo · simulated responses · no charges · vault resets on exit.\n\n');
+  const command=args.length?args:['play'];if(options.json)command.push('--json');
+  const child=spawn(process.execPath,[fileURLToPath(new URL('./cli.js',import.meta.url)),...command],{
    stdio:'inherit',env:{...process.env,LOOTLM_URL:url,LOOTLM_API_KEY:key,LOOTLM_CONFIG_DIR:path.join(dir,'client'),OPENROUTER_API_KEY:'',LOOTLM_PROVIDER:'demo',LOOTLM_LIVE_ENABLED:'false'}
   });
   const stop=()=>child.kill('SIGTERM');

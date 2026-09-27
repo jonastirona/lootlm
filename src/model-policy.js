@@ -1,16 +1,8 @@
-const compact=value=>String(value||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
-
+// Explicit approved collection IDs replace the earlier family-wide floor.
+const approved=new Set(['anthropic/claude-sonnet-5','anthropic/claude-opus-5.5','anthropic/claude-fable-5.1','openai/gpt-oss-20b','openai/gpt-oss-120b','openai/gpt-6-sol','openai/gpt-6-astra']);
 export function modelPolicyViolation(entry){
- const identities=[compact(entry?.name),compact(entry?.model)];
- for(const identity of identities){
-  const isClaude=identity.includes('anthropic')||identity.includes('claude');
-  const allowedClaude=identity.includes('opus55')||identity.includes('fable');
-  if(isClaude&&!allowedClaude)return 'Anthropic entries are limited to Claude Opus 5.5 and Claude Fable.';
-
-  const isOpenAI=identity.includes('openai')||identity.includes('codex')||identity.includes('gpt');
-  const allowedOpenAI=identity.includes('astra');
-  if(isOpenAI&&!allowedOpenAI)return 'OpenAI and Codex entries are limited to GPT Astra.';
- }
-
+ const model=String(entry?.model||'');
+ if((model.startsWith('anthropic/')||model.startsWith('openai/'))&&!approved.has(model))return 'This Anthropic/OpenAI model is outside the approved collection.';
+ if(/claude|anthropic|openai|codex|gpt/i.test(entry?.name||'')&&!approved.has(model))return 'Provider identity must match an approved model ID.';
  return null;
 }

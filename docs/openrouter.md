@@ -17,7 +17,7 @@ Never paste the key into browser application code, source control or a CLI argum
 
 You can prepare a live pool while the server remains in demo mode. Use `loot admin models` to inspect the current catalog, then `loot admin pool --file config/openrouter-common.json` to publish the common-only starting pool. This grants nothing and spends nothing. It creates a separate OpenRouter pool.
 
-The checked-in starting candidates are Llama 3.2 3B (small model), Qwen3 8B (common), Qwen3 Coder (strong), and Qwen3 235B A22B (rare). They were verified against the public catalog when this package was built; none is claimed to have passed live inference testing without a key. Llama 3.2 3B does not advertise function tools in the catalog; the API rejects unsupported tool requests before spending.
+The checked-in Discovery 01 draft contains 24 distinct catalog IDs across six tiers. It was validated against the public catalog when this package was built; none is claimed to have passed live inference testing without a key. Llama 3.2 1B and 3B do not advertise function tools, so they are text-only Starter outcomes. The API rejects unsupported tool requests before spending.
 
 Alternatively:
 
@@ -41,7 +41,7 @@ The script makes three billed requests: short text, streaming text, and a harmle
 
 A failure or incomplete check is not permission to retry blindly. Inspect `loot request req_ID`. The smoke check uses unique idempotency keys, does not automatically repeat generation, and revokes its temporary login session on exit. Tests use an existing allowance and do not change your pool or purchases.
 
-Once the cheap-model check passes, publish `config/openrouter-pool.json` after reviewing current prices with `loot admin models`. Enable rare live inference explicitly. Test each model's token reporting, tools where supported, reasoning usage and streaming behavior before treating the full pool as verified.
+Once the cheap-model check passes, review `config/collection-openrouter-draft.json` against current prices and publish it only for internal testing. Enable premium live inference explicitly. Test every model's token reporting, tools where supported, reasoning usage and streaming behavior before treating the collection as verified. The 30% / 35% / 20% / 10% / 4% / 1% tier weights are provisional product hypotheses.
 
 ## Recovery
 

@@ -49,23 +49,22 @@ The animation never computes or alters the result. The server commits the roll a
 
 Rarity is redundant by design: color, glyph, and uppercase label always appear together.
 
-| Rarity | Terminal color | Glyph | Target entries |
-| --- | --- | :---: | --- |
-| Common | ANSI 250 gray | ◆ | 25%, 20% |
-| Uncommon | ANSI 114 green | ⬟ | 15%, 10% |
-| Rare | ANSI 75 blue | ✦ | 9%, 7% |
-| Epic | ANSI 141 purple | ✧ | 6%, 4% |
-| Legendary | Warm gold `#E6A431` | ✹ | 2%, 2% |
+| Rarity | Terminal color | Glyph | Tier probability |
+| --- | --- | :---: | ---: |
+| Starter | Silver | ◇ | 30% |
+| Common | Emerald | ◆ | 35% |
+| Specialist | Electric blue | ⬟ | 20% |
+| Epic | Purple | ✦ | 10% |
+| Legendary | Warm gold | ✹ | 4% |
+| Mythic | Prismatic | ✺ | 1% |
 
-Mythic is sidelined for the MVP. The CLI temporarily maps the old prototype tiers `bust` to Common and `strong` to Epic; Jonas should remove those legacy values when the ten-model pool lands.
+The CLI retains mappings for old prototype tier values only so historical award snapshots remain readable.
 
 Rarity must describe probability, not guaranteed quality or monetary value. The exact percentage remains visible in `loot odds`.
 
-## Vendor quality floor
+## Vendor allowlist
 
-The pool may use Claude Opus 5.5 and Claude Fable, but no lower Claude or Anthropic substitution. It may use GPT Astra, but no lower GPT, OpenAI, or Codex substitution. In particular, Claude Sonnet, GPT Sol, and Codex mini are out of scope even if they are cheaper or more available.
-
-This is an allowlist rule, not a claim about current provider availability or a string-based quality ranking. Pool publication checks both the display name and provider model identifier, rejects a restricted family unless its approved marker is present, and still requires separate provider-catalog, price, resale-policy, and capability review. Existing award snapshots stay immutable; on startup, a legacy active pool that violates this floor is retired for new rolls and replaced by the safe demo pool.
+Anthropic and OpenAI entries use exact approved model IDs from Discovery 01. This prevents a display-name lookalike or dynamic alias from replacing the advertised checkpoint. It is not a quality claim. Every entry still requires provider-catalog, price, resale-policy, and capability review. Existing award snapshots stay immutable; an obsolete active demo pool is replaced for new rolls when the collection version changes.
 
 ## Money UX
 

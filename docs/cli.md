@@ -2,7 +2,7 @@
 
 LootLM has one user surface: the terminal. The short command is `loot`; `lootlm` is retained as a compatibility alias.
 
-Install the downloaded package with `npm install -g ./lootlm-0.2.0.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
+Install the downloaded package with `npm install -g ./lootlm-0.3.0.tgz`, or run `npm link` in the source directory. Node 24.2+ is required. The package is not published to a public registry.
 
 ## First run
 
@@ -18,6 +18,7 @@ Running `loot` with no subcommand opens the interactive shell. A prompt uses the
 ```text
 /roll       roll and keep open-session context
 /models     inspect saved allocations
+/collection browse all 24 models, capabilities, and exact odds
 /use 2      equip model 2
 /odds       inspect exact published probabilities
 /preview    preview every rarity treatment
@@ -33,6 +34,7 @@ Current open-session continuity is not durable project persistence. Closing the 
 
 ```sh
 loot status
+loot collection
 loot preview
 loot inventory
 loot use 2
@@ -47,7 +49,7 @@ loot logout
 
 The latest roll becomes active. `loot use` accepts the displayed inventory number, full award ID, or displayed short ID.
 
-`loot preview` renders Common, Uncommon, Rare, Epic, and Legendary side by side without login or a server. It also demonstrates the Epic and Legendary light sweep in a color terminal. `--no-animation`, `LOOTLM_REDUCED_MOTION=1`, and `NO_COLOR=1` preserve a static labeled treatment.
+`loot collection` shows the 24 Discovery 01 models, exact per-model odds, owned status, and catalog-advertised tool/context metadata. `loot preview` renders all six tiers side by side without login or a server. It demonstrates the Epic, Legendary, and Mythic light sweep in a color terminal. `--no-animation`, `LOOTLM_REDUCED_MOTION=1`, and `NO_COLOR=1` preserve a static labeled treatment.
 
 ## Login and credentials
 

@@ -20,8 +20,8 @@ Manual resolution requires a verified input count, generated count, dollar cost 
 - Two active or pending requests per user.
 - Default maximum output 1,024 tokens and input body content 24,000 UTF-8 bytes.
 - Daily cost cap defaults to $5, evaluated by UTC settlement date. All outstanding dollar reservations are included across dates.
-- The inherited rare-tier live switch remains disabled by default; Jonas must replace it with policy for the five-rarity target pool before paid use.
-- Pool publication rejects Anthropic models other than Claude Opus 5.5 or Claude Fable, and OpenAI/Codex models other than GPT Astra. Do not bypass this floor with aliases or opaque display names.
+- The inherited `rareEnabled` switch gates Epic, Legendary, and Mythic live inference and remains disabled by default. Rename and redesign this control before paid use.
+- Anthropic and OpenAI publication uses an explicit approved-model list matching Discovery 01. Display-name lookalikes and unapproved IDs are rejected.
 - No silent model fallback; unavailable or repriced models fail explicitly.
 
 Actual usage and dollar accounting always use provider-reported values. User token debits cannot exceed that request's reservation; any excess is recorded separately as `overage_tokens` and absorbed by the operator. Input reservation uses a conservative byte bound with chat/tool overhead. Arbitrary models may violate assumptions; verify each admitted model. Unexpected token/cost overages pause inference and create an audit record, while preserving actual usage and protecting remaining balances. The cap limits new authorized requests; it cannot reverse charges or perfectly constrain a provider that ignores limits or returns unexpected billing.

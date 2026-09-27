@@ -1,3 +1,4 @@
+import collection from '../config/collection-demo.json' with {type:'json'};
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -20,9 +21,4 @@ export function config(env=process.env) {
     liveEnabled:env.LOOTLM_LIVE_ENABLED==='true',dailyUsd:number('LOOTLM_DAILY_USD',5),
     maxOutput:Math.floor(number('LOOTLM_MAX_OUTPUT',1024)),maxInputBytes:Math.floor(number('LOOTLM_MAX_INPUT_BYTES',24000))};
 }
-export const initialPool=[
-  {id:'tiny',name:'Qwen3 1.7B',tier:'bust',weight:10,model:'qwen/qwen3-1.7b',inputPrice:0,outputPrice:0},
-  {id:'common',name:'Qwen3 8B',tier:'common',weight:65,model:'qwen/qwen3-8b',inputPrice:0,outputPrice:0},
-  {id:'strong',name:'Qwen3 Coder',tier:'strong',weight:20,model:'qwen/qwen3-coder',inputPrice:0,outputPrice:0},
-  {id:'rare',name:'Qwen3 235B A22B',tier:'rare',weight:5,model:'qwen/qwen3-235b-a22b',inputPrice:0,outputPrice:0}
-];
+export const initialPool=collection.entries;

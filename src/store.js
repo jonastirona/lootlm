@@ -22,7 +22,10 @@ export class Store {
     CREATE TABLE IF NOT EXISTS audit(id TEXT PRIMARY KEY,actor TEXT NOT NULL,action TEXT NOT NULL,detail TEXT NOT NULL,created_at TEXT NOT NULL);`);
   migrate(this.db);
   if(!this.setting('pool_demo'))this.publishPool(initialPool,'system','demo');
-  else if(this.pool('demo').entries.some(modelPolicyViolation))this.publishPool(initialPool,'system:model-policy','demo');
+  else {
+   const active=this.pool('demo').entries,expected=initialPool.map(e=>e.model).join('|');
+   if(active.some(modelPolicyViolation)||active.map(e=>e.model).join('|')!==expected)this.publishPool(initialPool,'system:collection-upgrade','demo');
+  }
   for(const [k,v] of [['spinsEnabled','true'],['inferenceEnabled','true'],['rareEnabled','false']])if(this.setting(k)===null)this.set(k,v);
  }
  now(){return new Date().toISOString();}
@@ -42,15 +45,16 @@ export class Store {
  revoke(user,key){return this.db.prepare('DELETE FROM credentials WHERE id=? AND user_id=?').run(key,user.id).changes;}
  publishPool(entries,actor,supplier=this.cfg.provider){
   if(!['demo','openrouter'].includes(supplier))fail(400,'invalid_supplier','Unknown supplier.');
-  if(!Array.isArray(entries)||entries.length<1||entries.length>12)fail(400,'invalid_pool','Pool needs 1–12 entries.');
-  const ids=new Set();let total=0;
+  if(!Array.isArray(entries)||entries.length<1||entries.length>32)fail(400,'invalid_pool','Pool needs 1–32 entries.');
+  const ids=new Set(),models=new Set();let total=0;
   const body=entries.map(e=>{
    if(!e||typeof e.id!=='string'||!/^[a-z0-9_-]{1,40}$/.test(e.id)||ids.has(e.id))fail(400,'invalid_pool','Entry IDs must be unique.');ids.add(e.id);
-   if(typeof e.name!=='string'||e.name.length>80||!e.name.length||typeof e.model!=='string'||e.model.length>150||!e.model.length||!['bust','common','strong','rare'].includes(e.tier))fail(400,'invalid_pool','Invalid model metadata.');
+   if(typeof e.name!=='string'||e.name.length>80||!e.name.length||typeof e.model!=='string'||e.model.length>150||!e.model.length||!['starter','common','specialist','epic','legendary','mythic','bust','strong','rare','uncommon'].includes(e.tier))fail(400,'invalid_pool','Invalid model metadata.');
+   if(models.has(e.model))fail(400,'duplicate_model','A checkpoint may appear only once per pool.');models.add(e.model);
    const policyViolation=modelPolicyViolation(e);if(policyViolation)fail(400,'model_policy',policyViolation);
    if(!Number.isSafeInteger(e.weight)||e.weight<1||e.weight>10000)fail(400,'invalid_pool','Weights must be positive integers.');total+=e.weight;
    for(const k of ['inputPrice','outputPrice'])if(!Number.isFinite(e[k])||e[k]<0||e[k]>10000)fail(400,'invalid_pool','Prices must be USD per million tokens.');
-   return {id:e.id,name:e.name,model:e.model,tier:e.tier,weight:e.weight,inputPrice:e.inputPrice,outputPrice:e.outputPrice,...(supplier==='openrouter'?{capabilities:e.capabilities||null}:{})};
+   return {id:e.id,name:e.name,model:e.model,tier:e.tier,weight:e.weight,inputPrice:e.inputPrice,outputPrice:e.outputPrice,description:typeof e.description==='string'?e.description.slice(0,200):'',capabilityEvidence:typeof e.capabilityEvidence==='string'?e.capabilityEvidence.slice(0,200):'Catalog metadata; not live verified.',capabilities:e.capabilities||null};
   });
   return this.tx(()=>{const version=id('pool');this.db.prepare('INSERT INTO pools(version,body,created_at,supplier) VALUES(?,?,?,?)').run(version,JSON.stringify(body),this.now(),supplier);this.set('pool_'+supplier,version);this.audit(actor,'pool.publish',{version,total,supplier});return version;});
  }
@@ -78,7 +82,7 @@ export class Store {
   const a=this.award(user,aid);
   if(a.supplier!==this.cfg.provider)fail(409,'supplier_mismatch','This allowance belongs to another environment.');
   if(!Number.isSafeInteger(tokens)||tokens<1||!Number.isFinite(usd)||usd<0)fail(400,'invalid_reservation','Invalid reservation.');
-  if(this.cfg.provider==='openrouter'&&a.choice.tier==='rare'&&this.setting('rareEnabled')!=='true')fail(403,'rare_paused','Rare-model live inference is disabled by the administrator.');
+  if(this.cfg.provider==='openrouter'&&['rare','epic','legendary','mythic'].includes(a.choice.tier)&&this.setting('rareEnabled')!=='true')fail(403,'rare_paused','Rare-model live inference is disabled by the administrator.');
   if(tokens>a.available)fail(402,'insufficient_tokens','Not enough unreserved tokens for this request. Lower max_tokens or shorten the prompt.');
   const concurrent=this.db.prepare("SELECT COUNT(*) AS n FROM requests WHERE user_id=? AND status IN ('reserved','pending')").get(user.id).n;
   if(concurrent>=2)fail(429,'concurrency_limit','At most two active or pending requests per tester.');

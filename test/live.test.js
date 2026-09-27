@@ -43,6 +43,7 @@ test('connection diagnostics omit sensitive upstream metadata and classify failu
 test('pricing includes cache/context tiers; optional search does not disqualify text inference',()=>{
  const info=modelInfo({...model,pricing:{...model.pricing,web_search:'0.01',input_cache_write:'0.00000125',overrides:[{min_prompt_tokens:200000,prompt:'0.000002',completion:'0.000004',input_cache_write:'0.000003'}]}});
  assert.equal(info.inputCeiling,3);assert.equal(info.outputCeiling,4);
+ assert.equal(modelInfo({...model,pricing:{...model.pricing,internal_reasoning:'0.000005'}}).outputCeiling,5);
  assert.throws(()=>modelInfo({...model,pricing:{...model.pricing,request:'0.01'}}),e=>e.code==='unsupported_pricing');
  assert.throws(()=>modelInfo({...model,pricing:{...model.pricing,new_fee:'0.1'}}),e=>e.code==='unsupported_pricing');
  assert.throws(()=>modelInfo({...model,pricing:{prompt:null,completion:'0.000001'}}),e=>e.code==='invalid_pricing');
@@ -70,7 +71,7 @@ test('demo awards remain demo when server switches to live; models list filters 
  const f=await fixture(t);f.c.provider='demo';const a=f.db.spin(f.user,'demo',()=>0).award;f.c.provider='openrouter';
  assert.equal((await f.call('/v1/chat/completions',{model:a.id,messages:[{role:'user',content:'hi'}]})).status,409);assert.equal(f.calls(),0);
  assert.equal((await f.call('/v1/models',undefined,'GET')).data.data.length,0);assert.equal(f.db.award(f.user,a.id).supplier,'demo');
- await f.call('/internal/admin/pool',{supplier:'openrouter',entries:[entry]},'PUT');assert.equal(f.db.pool('demo').entries.length,4);assert.equal(f.db.pool('openrouter').entries.length,1);
+ await f.call('/internal/admin/pool',{supplier:'openrouter',entries:[entry]},'PUT');assert.equal(f.db.pool('demo').entries.length,24);assert.equal(f.db.pool('openrouter').entries.length,1);
 });
 
 test('default output shrinks near exhaustion without weakening input reservations',()=>{

@@ -11,14 +11,14 @@ export function modelInfo(model){
  const variants=Array.isArray(p.overrides)?p.overrides:[];
  // Reserve for all advertised context and cache-write tiers, not only the cheapest endpoint.
  const inputCeiling=Math.max(inputPrice,...Object.entries(p).filter(([k])=>k.startsWith('input_cache_')).map(([,v])=>million(v)),...variants.flatMap(v=>Object.entries(v).filter(([k])=>k==='prompt'||k.startsWith('input_cache_')).map(([,x])=>million(x))));
- const outputCeiling=Math.max(outputPrice,...variants.filter(v=>v.completion!==undefined).map(v=>million(v.completion)));
+ const outputCeiling=Math.max(outputPrice,p.internal_reasoning===undefined?0:million(p.internal_reasoning),...variants.filter(v=>v.completion!==undefined).map(v=>million(v.completion)));
  const knownOptional=['image','image_output','image_token','audio','audio_output','audio_input','internal_reasoning','web_search','input_audio_cache','request'];
  for(const [k,v] of Object.entries(p)){
   if(k==='overrides'||k==='prompt'||k==='completion'||k.startsWith('input_cache_')||knownOptional.includes(k))continue;
   if(Number(v)!==0)fail('unsupported_pricing',`Unrecognized price component: ${k}`);
  }
  if(p.request!==undefined&&Number(p.request)!==0)fail('unsupported_pricing','Per-request charges are unsupported.');
- if(p.internal_reasoning!==undefined&&Number(p.internal_reasoning)!==0)fail('unsupported_pricing','Separately priced reasoning is unsupported.');
+ // Reasoning is already counted in completion tokens; reserve at the larger advertised rate.
  if(!model.architecture?.input_modalities?.includes('text')||model.architecture?.output_modalities?.length!==1||model.architecture.output_modalities[0]!=='text')fail('unsupported_model','Text input and output are required.');
  return {id:model.id,name:model.name||model.id,inputPrice,outputPrice,inputCeiling,outputCeiling,
   contextLength:model.context_length||model.top_provider?.context_length||0,
@@ -26,7 +26,7 @@ export function modelInfo(model){
   parameters:model.supported_parameters||[],catalogCheckedAt:new Date().toISOString()};
 }
 export async function reviewEntries(provider,entries){
- if(!Array.isArray(entries)||entries.length<1||entries.length>12)fail('invalid_pool','Select 1–12 models.');
+ if(!Array.isArray(entries)||entries.length<1||entries.length>32)fail('invalid_pool','Select 1–32 models.');
  const catalog=await provider.catalog();
  return entries.map(e=>{
   if(!e||typeof e.model!=='string')fail('invalid_model','Every entry needs a model ID.');
