@@ -4,9 +4,9 @@ This document is the UI/backend seam for LootLM. PJ owns the terminal experience
 
 ## One surface
 
-LootLM lives in Terminal. There is no dashboard, browser chat, browser vault, browser odds page, or custom checkout application.
+LootLM began as a terminal-first product. The current build also serves a browser arcade, vault, exact odds view, and API onboarding from the same backend.
 
-The only browser exception is a payment processor's hosted checkout. `loot topup` starts that payment ceremony, opens the short-lived URL, and returns status to Terminal. A minimal completion page may say "Payment received; return to Terminal," but must not grow into a second account surface.
+Future payment entry remains hosted by the payment processor. `loot topup` starts that payment ceremony, opens the short-lived URL, and returns status to Terminal; the browser arcade must use the same hosted checkout and webhook-verified credit flow.
 
 The old `public/` prototype is preserved only as unserved design history. It is excluded from the npm package and the API root returns a JSON 404.
 

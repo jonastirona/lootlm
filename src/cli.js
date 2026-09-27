@@ -24,7 +24,7 @@ for(let i=0;i<raw.length;i++){
 }
 
 const requested=args.shift();
-const cmd=flags.help?'help':requested||(stdin.isTTY?'play':'help');
+const cmd=flags.help?'help':flags.version?'version':requested||(stdin.isTTY?'play':'help');
 const configDir=process.env.LOOTLM_CONFIG_DIR||path.join(os.homedir(),'.config','lootlm');
 const configFile=path.join(configDir,'config.json');
 let cfg={};
@@ -610,7 +610,7 @@ function showError(error){
 async function main(){
  if(cmd==='demo'){const {runDemo}=await import('./demo.js');await runDemo(args,{json:!!flags.json});return;}
  if(cmd==='help'){help();return;}
- if(cmd==='version'){stdout.write('lootlm 0.9.0\n');return;}
+ if(cmd==='version'){stdout.write('lootlm 0.10.0\n');return;}
  if(cmd==='serve'){
   const {spawn}=await import('node:child_process');
   const child=spawn(process.execPath,[fileURLToPath(new URL('./server.js',import.meta.url))],{stdio:'inherit',env:process.env});
@@ -695,8 +695,9 @@ async function main(){
   else if(sub==='status')data=await json('/internal/admin');
   else if(sub==='pause'||sub==='resume')data=await json('/internal/admin',{method:'PATCH',body:{inferenceEnabled:sub==='resume',spinsEnabled:sub==='resume'}});
   else if(sub==='pool'){if(!flags.file)throw Error('Use --file pool.json');const body=JSON.parse(fs.readFileSync(flags.file,'utf8'));data=await json('/internal/admin/pool',{method:'PUT',body:{entries:Array.isArray(body)?body:body.entries,supplier:flags.supplier||body.supplier}});}
+  else if(sub==='openrouter-setup'){const file=fileURLToPath(new URL('../config/collection-openrouter-draft.json',import.meta.url));const body=JSON.parse(fs.readFileSync(file,'utf8'));data=await json('/internal/admin/pool',{method:'PUT',body:{entries:body.entries,supplier:'openrouter'}});}
   else if(sub==='resolve'){data=await json('/internal/admin/resolve',{body:{requestId:flags.id,input:Number(flags.input),output:Number(flags.output),cost:Number(flags.cost),note:flags.note}});}
-  else throw Error('admin status|models|retry --id ID|pause|resume|pool --file FILE|resolve --id ID --input N --output N --cost USD --note EVIDENCE');
+  else throw Error('admin status|models|openrouter-setup|retry --id ID|pause|resume|pool --file FILE|resolve --id ID --input N --output N --cost USD --note EVIDENCE');
   stdout.write(JSON.stringify(data,null,2)+'\n');return;
  }
  throw Error(`Unknown command: ${cmd}. Run loot help.`);

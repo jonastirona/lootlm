@@ -2,7 +2,7 @@
 
 LootLM is stochastic inference in the terminal: fund an account, roll into one model, and keep working with that model for a bounded token session. The repository, project, and conversation should survive the next roll; only the model changes.
 
-**Terminal only.** LootLM has no product web app. The checked-in `public/` prototype is retained as unserved design history, is excluded from the package, and is not part of the user journey.
+LootLM now has two first-class surfaces: the full-screen terminal casino and a matching local web arcade. Both use the same server-side pool, persisted award, vault, token ledger, and OpenAI-compatible inference API.
 
 **Internal testing only.** The current server simulates purchases and inference by default. It is not a public commercial launch, supplier resale authorization, or proof of durable cross-roll context.
 
@@ -35,7 +35,7 @@ npm install
 npm start
 ```
 
-In another terminal:
+Open `http://localhost:3131` for the web arcade, or use the CLI in another terminal:
 
 ```sh
 npm link

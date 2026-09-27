@@ -1,6 +1,6 @@
 # Your first LootLM roll
 
-This is an internal terminal-only build. Demo mode charges no money and labels its simulated responses.
+This is an internal CLI and web build. Demo mode charges no money and labels its simulated responses.
 
 1. Start the API server with `npm start`.
 2. Install the local command with `npm link`.

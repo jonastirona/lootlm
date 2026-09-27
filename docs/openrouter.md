@@ -15,11 +15,16 @@ Never paste the key into browser application code, source control or a CLI argum
 
 ## Prepare the pool
 
-You can prepare a live pool while the server remains in demo mode. Use `loot admin models` to inspect the current catalog, then `loot admin pool --file config/openrouter-common.json` to publish the common-only starting pool. This grants nothing and spends nothing. It creates a separate OpenRouter pool.
+You can prepare a live pool while the server remains in demo mode. Run the read-only catalog check, then publish the checked-in draft. This grants nothing and spends nothing. It creates a separate OpenRouter pool.
+
+```sh
+npm run openrouter:check
+loot admin openrouter-setup
+```
 
 The checked-in Discovery 01 draft contains 24 distinct catalog IDs across six tiers. It was validated against the public catalog when this package was built; none is claimed to have passed live inference testing without a key. Llama 3.2 1B and 3B do not advertise function tools, so they are text-only Bust outcomes. The API rejects unsupported tool requests before spending.
 
-Alternatively:
+To publish a custom or common-only pool instead:
 
 ```sh
 loot admin pool --file config/openrouter-common.json
